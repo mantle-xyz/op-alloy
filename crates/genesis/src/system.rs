@@ -28,7 +28,7 @@ pub struct SystemConfig {
     /// Gas limit value
     pub gas_limit: u64,
     /// BaseFee identifies the L2 block base fee
-    pub base_fee: u64,
+    pub base_fee: U256,
 }
 
 /// Represents type of update to the system config.
@@ -44,7 +44,7 @@ pub enum SystemConfigUpdateType {
     /// Unsafe block signer update type
     UnsafeBlockSigner = 3,
     /// EIP-1559 parameters update type
-    Eip1559 = 4,
+    BaseFee = 4,
 }
 
 impl TryFrom<u64> for SystemConfigUpdateType {
@@ -56,7 +56,7 @@ impl TryFrom<u64> for SystemConfigUpdateType {
             1 => Ok(Self::GasConfig),
             2 => Ok(Self::GasLimit),
             3 => Ok(Self::UnsafeBlockSigner),
-            4 => Ok(Self::Eip1559),
+            4 => Ok(Self::BaseFee),
             _ => Err(SystemConfigUpdateError::LogProcessing(
                 LogProcessingError::InvalidSystemConfigUpdateType(value),
             )),
@@ -70,7 +70,6 @@ impl SystemConfig {
         &mut self,
         receipts: &[Receipt],
         l1_system_config_address: Address,
-        ecotone_active: bool,
     ) -> Result<(), SystemConfigUpdateError> {
         for receipt in receipts {
             if Eip658Value::Eip658(false) == receipt.status {
@@ -84,7 +83,7 @@ impl SystemConfig {
                     && topics[0] == CONFIG_UPDATE_TOPIC
                 {
                     // Safety: Error is bubbled up by the trailing `?`
-                    self.process_config_update_log(log, ecotone_active)?;
+                    self.process_config_update_log(log)?;
                 }
                 Ok(())
             })?;
@@ -107,7 +106,6 @@ impl SystemConfig {
     fn process_config_update_log(
         &mut self,
         log: &Log,
-        ecotone_active: bool,
     ) -> Result<SystemConfigUpdateType, SystemConfigUpdateError> {
         // Validate the log
         if log.topics().len() < 3 {
@@ -139,14 +137,15 @@ impl SystemConfig {
             SystemConfigUpdateType::Batcher => {
                 self.update_batcher_address(log_data).map_err(SystemConfigUpdateError::Batcher)
             }
-            SystemConfigUpdateType::GasConfig => self
-                .update_gas_config(log_data, ecotone_active)
-                .map_err(SystemConfigUpdateError::GasConfig),
+            SystemConfigUpdateType::GasConfig => {
+                self
+                    .update_gas_config(log_data).map_err(SystemConfigUpdateError::GasConfig)
+            }
             SystemConfigUpdateType::GasLimit => {
                 self.update_gas_limit(log_data).map_err(SystemConfigUpdateError::GasLimit)
             }
-            SystemConfigUpdateType::Eip1559 => {
-                self.update_eip1559_params(log_data).map_err(SystemConfigUpdateError::Eip1559)
+            SystemConfigUpdateType::BaseFee => {
+                self.update_base_fee_config(log_data).map_err(SystemConfigUpdateError::BaseFee)
             }
             // Ignored in derivation
             SystemConfigUpdateType::UnsafeBlockSigner => {
@@ -184,12 +183,39 @@ impl SystemConfig {
         Ok(SystemConfigUpdateType::Batcher)
     }
 
+    fn update_base_fee_config(
+        &mut self,
+        log_data: &[u8],
+    ) -> Result<SystemConfigUpdateType, BaseFeeUpdateError> {
+        if log_data.len() != 96 {
+            return Err(BaseFeeUpdateError::InvalidDataLen(log_data.len()));
+        }
+
+        let Ok(pointer) = <sol!(uint64)>::abi_decode(&log_data[0..32], true) else {
+            return Err(BaseFeeUpdateError::PointerDecodingError);
+        };
+        if pointer != 32 {
+            return Err(BaseFeeUpdateError::InvalidDataPointer(pointer));
+        }
+        let Ok(length) = <sol!(uint64)>::abi_decode(&log_data[32..64], true) else {
+            return Err(BaseFeeUpdateError::LengthDecodingError);
+        };
+        if length != 32 {
+            return Err(BaseFeeUpdateError::InvalidDataLength(length));
+        }
+
+        let Ok(base_fee) = <sol!(uint256)>::abi_decode(&log_data[64..], true) else {
+            return Err(BaseFeeUpdateError::BaseFeeDecodingError);
+        };
+        self.base_fee = base_fee;
+        Ok(SystemConfigUpdateType::BaseFee)
+    }
+
     /// Updates the [SystemConfig] gas config - both the overhead and scalar values
     /// given the log data and rollup config.
     fn update_gas_config(
         &mut self,
         log_data: &[u8],
-        ecotone_active: bool,
     ) -> Result<SystemConfigUpdateType, GasConfigUpdateError> {
         if log_data.len() != 128 {
             return Err(GasConfigUpdateError::InvalidDataLen(log_data.len()));
@@ -215,18 +241,12 @@ impl SystemConfig {
             return Err(GasConfigUpdateError::ScalarDecodingError);
         };
 
-        if ecotone_active
-            && RollupConfig::check_ecotone_l1_system_config_scalar(scalar.to_be_bytes()).is_err()
-        {
-            // ignore invalid scalars, retain the old system-config scalar
-            return Ok(SystemConfigUpdateType::GasConfig);
-        }
 
         // Retain the scalar data in encoded form.
         self.scalar = scalar;
 
         // If ecotone is active, set the overhead to zero, otherwise set to the decoded value.
-        self.overhead = if ecotone_active { U256::ZERO } else { overhead };
+        self.overhead = overhead;
 
         Ok(SystemConfigUpdateType::GasConfig)
     }
@@ -275,7 +295,7 @@ pub enum SystemConfigUpdateError {
     /// A gas limit update error.
     GasLimit(GasLimitUpdateError),
     /// An EIP-1559 parameter update error.
-    Eip1559(EIP1559UpdateError),
+    BaseFee(BaseFeeUpdateError),
 }
 
 impl core::fmt::Display for SystemConfigUpdateError {
@@ -285,7 +305,7 @@ impl core::fmt::Display for SystemConfigUpdateError {
             Self::Batcher(err) => write!(f, "Batcher update error: {}", err),
             Self::GasConfig(err) => write!(f, "Gas config update error: {}", err),
             Self::GasLimit(err) => write!(f, "Gas limit update error: {}", err),
-            Self::Eip1559(err) => write!(f, "EIP-1559 parameter update error: {}", err),
+            Self::BaseFee(err) => write!(f, "EIP-1559 parameter update error: {}", err),
         }
     }
 }
@@ -465,7 +485,7 @@ impl core::error::Error for GasLimitUpdateError {}
 /// An error for updating the EIP-1559 parameters on the [SystemConfig].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum EIP1559UpdateError {
+pub enum BaseFeeUpdateError {
     /// Invalid data length.
     InvalidDataLen(usize),
     /// Failed to decode the data pointer argument from the eip 1559 update log.
@@ -477,10 +497,10 @@ pub enum EIP1559UpdateError {
     /// The data length is invalid.
     InvalidDataLength(u64),
     /// Failed to decode the eip1559 params argument from the eip 1559 update log.
-    EIP1559DecodingError,
+    BaseFeeDecodingError,
 }
 
-impl core::fmt::Display for EIP1559UpdateError {
+impl core::fmt::Display for BaseFeeUpdateError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::InvalidDataLen(len) => {
@@ -498,17 +518,17 @@ impl core::fmt::Display for EIP1559UpdateError {
             Self::InvalidDataLength(length) => {
                 write!(f, "Invalid config update log: invalid data length: {}", length)
             }
-            Self::EIP1559DecodingError => {
+            Self::BaseFeeDecodingError => {
                 write!(
                     f,
-                    "Failed to decode eip1559 parameter update log: eip1559 parameters invalid"
+                    "Failed to decode base fee parameter update log: base fee invalid"
                 )
             }
         }
     }
 }
 
-impl core::error::Error for EIP1559UpdateError {}
+impl core::error::Error for BaseFeeUpdateError {}
 
 /// System accounts
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -574,7 +594,7 @@ mod test {
         let ecotone_active = false;
 
         system_config
-            .update_with_receipts(&receipts, l1_system_config_address, ecotone_active)
+            .update_with_receipts(&receipts, l1_system_config_address)
             .unwrap();
 
         assert_eq!(system_config, SystemConfig::default());
@@ -607,7 +627,7 @@ mod test {
         };
 
         system_config
-            .update_with_receipts(&[receipt], l1_system_config_address, ecotone_active)
+            .update_with_receipts(&[receipt], l1_system_config_address)
             .unwrap();
 
         assert_eq!(
@@ -636,7 +656,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config.process_config_update_log(&update_log, false).unwrap();
+        system_config.process_config_update_log(&update_log).unwrap();
 
         assert_eq!(
             system_config.batcher_address,
@@ -664,7 +684,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config.process_config_update_log(&update_log, false).unwrap();
+        system_config.process_config_update_log(&update_log).unwrap();
 
         assert_eq!(system_config.overhead, U256::from(0xbabe));
         assert_eq!(system_config.scalar, U256::from(0xbeef));
@@ -690,7 +710,7 @@ mod test {
         };
 
         // Update the gas limit.
-        system_config.process_config_update_log(&update_log, true).unwrap();
+        system_config.process_config_update_log(&update_log).unwrap();
 
         assert_eq!(system_config.overhead, U256::from(0));
         assert_eq!(system_config.scalar, U256::from(0xbeef));
@@ -716,7 +736,7 @@ mod test {
         };
 
         // Update the gas limit.
-        system_config.process_config_update_log(&update_log, false).unwrap();
+        system_config.process_config_update_log(&update_log).unwrap();
 
         assert_eq!(system_config.gas_limit, 0xbeef_u64);
     }

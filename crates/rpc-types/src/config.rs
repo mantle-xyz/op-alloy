@@ -44,7 +44,6 @@ pub struct RollupConfig {
     pub deposit_contract_address: Address,
     pub l1_system_config_address: Address,
     pub mantle_da_switch: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datalayr_service_manager_addr: Address,
 }
 

@@ -1,7 +1,7 @@
 //! Chain Config Types
 
 use crate::{
-    base_fee_params, AddressList, ChainGenesis, OpBaseFeeParams, RollupConfig,
+     AddressList, ChainGenesis, OpBaseFeeParams, RollupConfig,
 };
 use alloc::string::String;
 use alloy_primitives::Address;

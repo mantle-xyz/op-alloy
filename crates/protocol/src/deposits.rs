@@ -21,6 +21,7 @@ pub const DEPOSIT_EVENT_ABI_HASH: B256 =
 /// The initial version of the deposit event log.
 pub const DEPOSIT_EVENT_VERSION_0: B256 = B256::ZERO;
 
+/// The version for mantle native token use mnt
 pub const DEPOSIT_EVENT_VERSION_1: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
 
 /// An [op_alloy_consensus::TxDeposit] validation error.
@@ -403,6 +404,7 @@ pub(crate) fn unmarshal_deposit_version0(
     Ok(())
 }
 
+/// Unmarshals a deposit transaction from the opaque data in deposit version1.
 pub(crate) fn unmarshal_deposit_version1(
     tx: &mut TxDeposit,
     to: Address,
@@ -454,6 +456,7 @@ pub(crate) fn unmarshal_deposit_version1(
     Ok(())
 }
 
+/// decode u128 field function
 pub fn decode_u128_field<E>(
     data: &[u8],
     offset: usize,
@@ -466,6 +469,7 @@ pub fn decode_u128_field<E>(
     Ok(if value == 0 { None } else { Some(value) })
 }
 
+/// decode u8 field function
 pub fn decode_u8_field<E>(
     data: &[u8],
     offset: usize,

@@ -105,21 +105,6 @@ pub fn to_system_config(
         ..Default::default()
     };
 
-    // After holocene's activation, the EIP-1559 parameters are stored in the block header's nonce.
-    if rollup_config.is_holocene_active(block.header.timestamp) {
-        let eip1559_params = block.header.nonce;
-        cfg.eip1559_denominator = Some(u32::from_be_bytes(
-            eip1559_params[0..4]
-                .try_into()
-                .map_err(|_| OpBlockConversionError::Eip1559DecodeError)?,
-        ));
-        cfg.eip1559_elasticity = Some(u32::from_be_bytes(
-            eip1559_params[4..8]
-                .try_into()
-                .map_err(|_| OpBlockConversionError::Eip1559DecodeError)?,
-        ));
-    }
-
     Ok(cfg)
 }
 

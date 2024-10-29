@@ -1,13 +1,11 @@
 //! Rollup Config Types
 
-use alloy_eips::eip1559::BaseFeeParams;
 use alloy_primitives::{address, b256, uint, Address};
 
 use alloy_eips::eip1898::BlockNumHash;
 
 use crate::{
-    base_fee_params, ChainGenesis, SystemConfig, BASE_SEPOLIA_BASE_FEE_PARAMS,
-    OP_MAINNET_BASE_FEE_PARAMS, OP_SEPOLIA_BASE_FEE_PARAMS,
+     ChainGenesis, SystemConfig,
 };
 
 /// The max rlp bytes per channel for the Bedrock hardfork.
@@ -75,7 +73,6 @@ pub struct RollupConfig {
     /// `l1_system_config_address` is the L1 address that the system config is stored at.
     pub l1_system_config_address: Address,
     /// `mantle_da_switch` is a switch that weather use mantle da.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub mantle_da_switch:bool,
     /// `datalayr_service_manager_addr` is the mantle da manager address that the data availability contract
     pub datalayr_service_manager_addr: Address,
@@ -107,7 +104,6 @@ impl<'a> arbitrary::Arbitrary<'a> for RollupConfig {
 // Need to manually implement Default because [`BaseFeeParams`] has no Default impl.
 impl Default for RollupConfig {
     fn default() -> Self {
-        let config = base_fee_params(10);
         Self {
             genesis: ChainGenesis::default(),
             block_time: 0,
@@ -161,7 +157,7 @@ pub const MANTLE_MAINNET_CONFIG: RollupConfig = RollupConfig {
             overhead: uint!(0xbc_U256),
             scalar: uint!(0x2710_U256),
             gas_limit: 200_000_000_000_u64,
-            base_fee: 20_000_000_u64,
+            base_fee: uint!(0x1312d00_U256),
         }),
     },
     block_time: 2_u64,
@@ -196,7 +192,7 @@ pub const MANTLE_SEPOLIA_CONFIG: RollupConfig = RollupConfig {
             overhead: uint!(0x834_U256),
             scalar: uint!(0xf4240_U256),
             gas_limit: 1_125_899_906_842_624,
-            base_fee: 1_000_000_000,
+            base_fee: uint!(0x3b9aca00_U256),
         }),
     },
     block_time: 2,
@@ -302,7 +298,7 @@ mod tests {
                     overhead: U256::ZERO,
                     scalar: U256::from(0xf4240),
                     gas_limit: 30_000_000,
-                    base_fee: 0,
+                    base_fee: U256::ZERO,
                 })
             }
         );

@@ -218,6 +218,8 @@ impl L1BlockInfoTx {
             gas_limit: 150_000_000,
             is_system_transaction: true,
             input: l1_info.encode_calldata(),
+            eth_value: None,
+            eth_tx_value: None
         };
 
         // With the regolith hardfork, system transactions were deprecated, and we allocate
@@ -538,11 +540,9 @@ mod test {
         let l2_block_time = 0;
 
         let l1_info = L1BlockInfoTx::try_new(
-            &rollup_config,
             &system_config,
             sequence_number,
             &l1_header,
-            l2_block_time,
         )
         .unwrap();
 
@@ -562,18 +562,15 @@ mod test {
 
     #[test]
     fn try_new_with_deposit_tx_ecotone() {
-        let rollup_config = RollupConfig { ecotone_time: Some(1), ..Default::default() };
         let system_config = SystemConfig::default();
         let sequence_number = 0;
         let l1_header = Header::default();
         let l2_block_time = 0xFF;
 
         let l1_info = L1BlockInfoTx::try_new(
-            &rollup_config,
             &system_config,
             sequence_number,
             &l1_header,
-            l2_block_time,
         )
         .unwrap();
 

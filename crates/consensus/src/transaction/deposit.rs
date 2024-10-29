@@ -75,7 +75,8 @@ impl TxDeposit {
         })
     }
 
-    pub fn decode_mint(buf: &mut &[u8]) -> Result<Option<dyn Decodable>, DecodeError> {
+    /// decode mint or eth_value or eth_tx_value function
+    pub fn decode_mint(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
         if *buf.first().ok_or(DecodeError::InputTooShort)? == EMPTY_STRING_CODE {
             buf.advance(1);
             Ok(None)
