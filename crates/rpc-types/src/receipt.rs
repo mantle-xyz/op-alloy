@@ -93,12 +93,12 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Regolith hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_nonce: Option<u64>,
-    /* ---------------------------------------- Canyon ---------------------------------------- */
-    /// Deposit receipt version for deposit transactions.
-    ///
-    /// Always null prior to the Canyon hardfork.
+
+    /* --------------------------------------- Regolith --------------------------------------- */
+    /// token ratio between eth and mnt
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub deposit_receipt_version: Option<u64>,
+    pub token_ration: Option<u128>
+
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string

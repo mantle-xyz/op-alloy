@@ -54,6 +54,8 @@ pub struct AddressList {
     pub preimage_oracle: Option<Address>,
     /// The challenger's address
     pub challenger: Option<Address>,
+    /// Mantle da manager's address
+    pub datalayr_service_manager_addr: Address,
 }
 
 impl AddressList {

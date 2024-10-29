@@ -27,14 +27,8 @@ pub struct SystemConfig {
     pub scalar: U256,
     /// Gas limit value
     pub gas_limit: u64,
-    /// Base fee scalar value
-    pub base_fee_scalar: Option<u64>,
-    /// Blob base fee scalar value
-    pub blob_base_fee_scalar: Option<u64>,
-    /// EIP-1559 denominator
-    pub eip1559_denominator: Option<u32>,
-    /// EIP-1559 elasticity
-    pub eip1559_elasticity: Option<u32>,
+    /// BaseFee identifies the L2 block base fee
+    pub base_fee: u64,
 }
 
 /// Represents type of update to the system config.
@@ -266,37 +260,6 @@ impl SystemConfig {
         Ok(SystemConfigUpdateType::GasLimit)
     }
 
-    /// Updates the EIP-1559 parameters of the [SystemConfig] given the log data.
-    fn update_eip1559_params(
-        &mut self,
-        log_data: &[u8],
-    ) -> Result<SystemConfigUpdateType, EIP1559UpdateError> {
-        if log_data.len() != 96 {
-            return Err(EIP1559UpdateError::InvalidDataLen(log_data.len()));
-        }
-
-        let Ok(pointer) = <sol!(uint64)>::abi_decode(&log_data[0..32], true) else {
-            return Err(EIP1559UpdateError::PointerDecodingError);
-        };
-        if pointer != 32 {
-            return Err(EIP1559UpdateError::InvalidDataPointer(pointer));
-        }
-        let Ok(length) = <sol!(uint64)>::abi_decode(&log_data[32..64], true) else {
-            return Err(EIP1559UpdateError::LengthDecodingError);
-        };
-        if length != 32 {
-            return Err(EIP1559UpdateError::InvalidDataLength(length));
-        }
-
-        let Ok(eip1559_params) = <sol!(uint64)>::abi_decode(&log_data[64..], true) else {
-            return Err(EIP1559UpdateError::EIP1559DecodingError);
-        };
-
-        self.eip1559_denominator = Some((eip1559_params >> 32) as u32);
-        self.eip1559_elasticity = Some(eip1559_params as u32);
-
-        Ok(SystemConfigUpdateType::Eip1559)
-    }
 }
 
 /// An error for processing the [SystemConfig] update log.
@@ -776,10 +739,5 @@ mod test {
             )
         };
 
-        // Update the EIP-1559 parameters.
-        system_config.process_config_update_log(&update_log, false).unwrap();
-
-        assert_eq!(system_config.eip1559_denominator, Some(0xbabe_u32));
-        assert_eq!(system_config.eip1559_elasticity, Some(0xbeef_u32));
     }
 }

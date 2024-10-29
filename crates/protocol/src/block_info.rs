@@ -174,55 +174,22 @@ impl core::error::Error for DecodeError {}
 impl L1BlockInfoTx {
     /// Creates a new [L1BlockInfoTx] from the given information.
     pub fn try_new(
-        rollup_config: &RollupConfig,
         system_config: &SystemConfig,
         sequence_number: u64,
         l1_header: &Header,
-        l2_block_time: u64,
     ) -> Result<Self, BlockInfoError> {
-        // In the first block of Ecotone, the L1Block contract has not been upgraded yet due to the
-        // upgrade transactions being placed after the L1 info transaction. Because of this,
-        // for the first block of Ecotone, we send a Bedrock style L1 block info transaction
-        if rollup_config.is_ecotone_active(l2_block_time)
-            && rollup_config.ecotone_time.unwrap_or_default() != l2_block_time
-        {
-            let scalar = system_config.scalar.to_be_bytes::<32>();
-            let blob_base_fee_scalar = (scalar[0] == L1_SCALAR_ECOTONE)
-                .then(|| {
-                    Ok::<u32, BlockInfoError>(u32::from_be_bytes(
-                        scalar[24..28]
-                            .try_into()
-                            .map_err(|_| BlockInfoError::L1BlobBaseFeeScalar)?,
-                    ))
-                })
-                .transpose()?
-                .unwrap_or_default();
-            let base_fee_scalar = u32::from_be_bytes(
-                scalar[28..32].try_into().map_err(|_| BlockInfoError::BaseFeeScalar)?,
-            );
-            Ok(Self::Ecotone(L1BlockInfoEcotone {
-                number: l1_header.number,
-                time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
-                block_hash: l1_header.hash_slow(),
-                sequence_number,
-                batcher_address: system_config.batcher_address,
-                blob_base_fee: l1_header.blob_fee().unwrap_or(1),
-                blob_base_fee_scalar,
-                base_fee_scalar,
-            }))
-        } else {
-            Ok(Self::Bedrock(L1BlockInfoBedrock {
-                number: l1_header.number,
-                time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
-                block_hash: l1_header.hash_slow(),
-                sequence_number,
-                batcher_address: system_config.batcher_address,
-                l1_fee_overhead: system_config.overhead,
-                l1_fee_scalar: system_config.scalar,
-            }))
-        }
+
+        Ok(Self::Bedrock(L1BlockInfoBedrock {
+            number: l1_header.number,
+            time: l1_header.timestamp,
+            base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
+            block_hash: l1_header.hash_slow(),
+            sequence_number,
+            batcher_address: system_config.batcher_address,
+            l1_fee_overhead: system_config.overhead,
+            l1_fee_scalar: system_config.scalar,
+        }))
+
     }
 
     /// Creates a new [L1BlockInfoTx] from the given information and returns a typed [TxDeposit] to
@@ -235,7 +202,7 @@ impl L1BlockInfoTx {
         l2_block_time: u64,
     ) -> Result<(Self, OpTxEnvelope), BlockInfoError> {
         let l1_info =
-            Self::try_new(rollup_config, system_config, sequence_number, l1_header, l2_block_time)?;
+            Self::try_new(system_config, sequence_number, l1_header)?;
 
         let source = DepositSourceDomain::L1Info(L1InfoDepositSource {
             l1_block_hash: l1_info.block_hash(),
