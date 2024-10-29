@@ -32,14 +32,14 @@ pub struct TxDeposit {
     /// Field indicating if this transaction is exempt from the L2 gas limit.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "isSystemTx"))]
     pub is_system_transaction: bool,
+    ///EthValue means L2 BVM_ETH mint tag, nil means that there is no need to mint BVM_ETH.
+    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt", rename = "ethValue"))]
+    pub eth_value: Option<u128>,
     /// Input has two uses depending if transaction is Create or Call (if `to` field is None or
     /// Some).
     pub input: Bytes,
-    ///EthValue means L2 BVM_ETH mint tag, nil means that there is no need to mint BVM_ETH.
-    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt"))]
-    pub eth_value: Option<u128>,
     /// EthTxValue means L2 BVM_ETH tx tag, nil means that there is no need to transfer BVM_ETH to msg.To.
-    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt"))]
+    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue"))]
     pub eth_tx_value: Option<u128>,
 
 }
@@ -69,8 +69,8 @@ impl TxDeposit {
             value: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             is_system_transaction: Decodable::decode(buf)?,
-            input: Decodable::decode(buf)?,
             eth_value: Self::decode_mint(buf)?,
+            input: Decodable::decode(buf)?,
             eth_tx_value: Self::decode_mint(buf)?,
         })
     }
@@ -115,12 +115,12 @@ impl TxDeposit {
         self.value.encode(out);
         self.gas_limit.encode(out);
         self.is_system_transaction.encode(out);
-        self.input.encode(out);
         if let Some(eth_value) = self.eth_value {
             eth_value.encode(out);
         } else {
             out.put_u8(EMPTY_STRING_CODE);
         }
+        self.input.encode(out);
         if let Some(eth_tx_value) = self.eth_tx_value {
             eth_tx_value.encode(out);
         } else {
@@ -298,8 +298,8 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::default(),
             eth_value: Some(100),
+            input: Bytes::default(),
             eth_tx_value: Some(100),
         };
 
@@ -320,8 +320,8 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::default(),
             eth_value: Some(100),
+            input: Bytes::default(),
             eth_tx_value: Some(100),
         };
 
@@ -344,8 +344,8 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::default(),
             eth_value: Some(100),
+            input: Bytes::default(),
             eth_tx_value: Some(100),
         };
 
@@ -362,8 +362,8 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::default(),
             eth_value: Some(100),
+            input: Bytes::default(),
             eth_tx_value: Some(100),
         };
 
@@ -386,8 +386,8 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::default(),
             eth_value: Some(100),
+            input: Bytes::default(),
             eth_tx_value: Some(100),
         };
 
@@ -448,8 +448,8 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 gas_limit: value.gas_limit,
                 is_system_transaction: value.is_system_transaction,
-                input: Cow::Borrowed(&value.input),
                 eth_value: value.eth_value,
+                input: Cow::Borrowed(&value.input),
                 eth_tx_value: value.eth_tx_value,
             }
         }
@@ -465,8 +465,8 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 gas_limit: value.gas_limit,
                 is_system_transaction: value.is_system_transaction,
-                input: value.input.into_owned(),
                 eth_value: value.eth_value,
+                input: value.input.into_owned(),
                 eth_tx_value: value.eth_tx_value,
             }
         }
