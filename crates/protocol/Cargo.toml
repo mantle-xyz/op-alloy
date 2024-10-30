@@ -1,6 +1,6 @@
 [package]
-name = "op-alloy-protocol"
-description = "Optimism protocol-specific types"
+name = "mantle-alloy-protocol"
+description = "Mantle protocol-specific types"
 
 version.workspace = true
 edition.workspace = true
@@ -16,8 +16,8 @@ workspace = true
 
 [dependencies]
 # Workspace
-op-alloy-genesis.workspace = true
-op-alloy-consensus.workspace = true
+mantle-alloy-genesis.workspace = true
+mantle-alloy-consensus.workspace = true
 
 # Alloy
 alloy-primitives = { workspace = true, features = ["map"] }
@@ -46,5 +46,5 @@ alloy-sol-types.workspace = true
 [features]
 default = ["serde", "std"]
 arbitrary = ["std", "dep:arbitrary", "alloy-consensus/arbitrary", "alloy-eips/arbitrary", "alloy-primitives/rand"]
-std = ["op-alloy-consensus/std", "op-alloy-genesis/std"]
-serde = ["dep:serde", "dep:alloy-serde", "op-alloy-consensus/serde", "op-alloy-genesis/serde"]
+std = ["mantle-alloy-consensus/std", "mantle-alloy-genesis/std"]
+serde = ["dep:serde", "dep:alloy-serde", "mantle-alloy-consensus/serde", "mantle-alloy-genesis/serde"]

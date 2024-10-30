@@ -9,8 +9,8 @@ use alloc::{
 use alloy_consensus::Header;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::{address, Address, Bytes, TxKind, B256, U256};
-use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use mantle_alloy_consensus::{OpTxEnvelope, TxDeposit};
+use mantle_alloy_genesis::{RollupConfig, SystemConfig};
 
 /// The system transaction gas limit post-Regolith
 const REGOLITH_SYSTEM_TX_GAS: u64 = 1_000_000;

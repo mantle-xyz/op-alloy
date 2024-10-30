@@ -2,8 +2,8 @@
 
 use crate::{block_info::DecodeError, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
 use alloy_primitives::B256;
-use op_alloy_consensus::{OpBlock, OpTxEnvelope};
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use mantle_alloy_consensus::{OpBlock, OpTxEnvelope};
+use mantle_alloy_genesis::{RollupConfig, SystemConfig};
 
 /// Returns if the given `value` is a deposit transaction.
 pub fn starts_with_2718_deposit<B>(value: &B) -> bool

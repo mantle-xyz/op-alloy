@@ -11,7 +11,7 @@ pub use alloy_network::*;
 use alloy_consensus::TxType;
 use alloy_primitives::{Address, Bytes, ChainId, TxKind, U256};
 use alloy_rpc_types_eth::AccessList;
-use op_alloy_consensus::OpTxType;
+use mantle_alloy_consensus::OpTxType;
 
 /// Types for an Op-stack network.
 #[derive(Clone, Copy, Debug)]
@@ -26,15 +26,15 @@ impl Network for Optimism {
 
     type UnsignedTx = alloy_consensus::TypedTransaction;
 
-    type ReceiptEnvelope = op_alloy_consensus::OpReceiptEnvelope;
+    type ReceiptEnvelope = mantle_alloy_consensus::OpReceiptEnvelope;
 
     type Header = alloy_consensus::Header;
 
     type TransactionRequest = alloy_rpc_types_eth::transaction::TransactionRequest;
 
-    type TransactionResponse = op_alloy_rpc_types::Transaction;
+    type TransactionResponse = mantle_alloy_rpc_types::Transaction;
 
-    type ReceiptResponse = op_alloy_rpc_types::OpTransactionReceipt;
+    type ReceiptResponse = mantle_alloy_rpc_types::OpTransactionReceipt;
 
     type HeaderResponse = alloy_rpc_types_eth::Header;
 

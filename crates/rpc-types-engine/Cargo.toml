@@ -1,6 +1,6 @@
 [package]
-name = "op-alloy-rpc-types-engine"
-description = "Optimism RPC types for the `engine` namespace"
+name = "mantle-alloy-rpc-types-engine"
+description = "Mantle RPC types for the `engine` namespace"
 
 version.workspace = true
 edition.workspace = true
@@ -17,7 +17,7 @@ workspace = true
 [dependencies]
 alloy-primitives.workspace = true
 alloy-rpc-types-engine.workspace = true
-op-alloy-protocol.workspace = true
+mantle-alloy-protocol.workspace = true
 
 derive_more = { workspace = true, features = ["display"] }
 
@@ -33,11 +33,11 @@ default = ["std", "serde"]
 std = [
   "alloy-primitives/std",
   "alloy-rpc-types-engine/std",
-  "op-alloy-protocol/std",
+  "mantle-alloy-protocol/std",
 ]
 serde = [
   "dep:serde",
   "dep:alloy-serde",
-  "op-alloy-protocol/serde",
+  "mantle-alloy-protocol/serde",
   "alloy-rpc-types-engine/serde",
 ]

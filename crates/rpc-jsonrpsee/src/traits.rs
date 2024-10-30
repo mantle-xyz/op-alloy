@@ -5,7 +5,7 @@
 use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::B256;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
-use op_alloy_rpc_types::{
+use mantle_alloy_rpc_types::{
     config::RollupConfig,
     net::{PeerDump, PeerInfo, PeerStats},
     output::OutputResponse,

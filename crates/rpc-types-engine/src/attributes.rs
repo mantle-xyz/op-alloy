@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B64};
 use alloy_rpc_types_engine::PayloadAttributes;
-use op_alloy_protocol::L2BlockInfo;
+use mantle_alloy_protocol::L2BlockInfo;
 
 /// Optimism Payload Attributes
 #[derive(Clone, Debug, PartialEq, Eq)]

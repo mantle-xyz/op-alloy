@@ -1,6 +1,6 @@
 [package]
-name = "op-alloy-genesis"
-description = "Optimism genesis types"
+name = "mantle-alloy-genesis"
+description = "Mantle genesis types"
 
 version.workspace = true
 edition.workspace = true

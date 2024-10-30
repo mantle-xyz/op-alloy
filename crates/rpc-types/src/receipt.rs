@@ -1,7 +1,7 @@
 //! Receipt types for RPC
 
 use alloy_serde::OtherFields;
-use op_alloy_consensus::OpReceiptEnvelope;
+use mantle_alloy_consensus::OpReceiptEnvelope;
 use serde::{Deserialize, Serialize};
 
 /// OP Transaction Receipt type
