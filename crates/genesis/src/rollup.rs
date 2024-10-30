@@ -74,8 +74,11 @@ pub struct RollupConfig {
     pub l1_system_config_address: Address,
     /// `mantle_da_switch` is a switch that weather use mantle da.
     pub mantle_da_switch:bool,
-    /// `datalayr_service_manager_addr` is the mantle da manager address that the data availability contract
+    /// `datalayr_service_manager_addr` is the mantle da manager address that the data availability contract.
     pub datalayr_service_manager_addr: Address,
+    /// `cancun_time` defined here just for mantle revm to use. no config in mantle rollup config file, actually.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub cancun_time: Option<u64>,
 
 }
 
@@ -97,6 +100,7 @@ impl<'a> arbitrary::Arbitrary<'a> for RollupConfig {
             l1_system_config_address: Address::arbitrary(u)?,
             mantle_da_switch: u.arbitrary()?,
             datalayr_service_manager_addr: Address::default(),
+            cancun_time: Option::<u64>::arbitrary(u)?,
         })
     }
 }
@@ -119,6 +123,7 @@ impl Default for RollupConfig {
             l1_system_config_address: Address::ZERO,
             mantle_da_switch: false,
             datalayr_service_manager_addr: Address::ZERO,
+            cancun_time: None,
         }
     }
 }
@@ -127,6 +132,10 @@ impl RollupConfig {
     /// Returns true if Regolith is active at the given timestamp.
     pub fn is_regolith_active(&self, timestamp: u64) -> bool {
         self.regolith_time.map_or(false, |t| timestamp >= t)
+    }
+
+    pub fn is_cancun_active(&self, timestamp: u64) -> bool {
+        self.cancun_time.map_or(false, |t| timestamp >= t)
     }
 
 
@@ -173,6 +182,7 @@ pub const MANTLE_MAINNET_CONFIG: RollupConfig = RollupConfig {
     l1_system_config_address: address!("427ea0710fa5252057f0d88274f7aeb308386caf"),
     mantle_da_switch: true,
     datalayr_service_manager_addr: address!("5BD63a7ECc13b955C4F57e3F12A64c10263C14c1"),
+    cancun_time: Some(0_u64),
 };
 
 /// The [RollupConfig] for MANTLE Sepolia.
@@ -208,6 +218,7 @@ pub const MANTLE_SEPOLIA_CONFIG: RollupConfig = RollupConfig {
     l1_system_config_address: address!("04b34526c91424e955d13c7226bc4385e57e6706"),
     mantle_da_switch: true,
     datalayr_service_manager_addr: address!("d7f17171896461A6EB74f95DF3f9b0D966A8a907"),
+    cancun_time: Some(0),
 };
 
 
@@ -276,6 +287,8 @@ mod tests {
   "batch_inbox_address": "0xff00000000000000000000000000000000042069",
   "deposit_contract_address": "0x08073dc48dde578137b8af042bcbc1c2491f1eb2",
   "l1_system_config_address": "0x94ee52a9d8edd72a85dea7fae3ba6d75e4bf1710",
+  "mantle_da_switch": true,
+  "datalayr_service_manager_addr": "0x5BD63a7ECc13b955C4F57e3F12A64c10263C14c1"
 }
         "#;
         let config: RollupConfig = serde_json::from_str(ser_cfg).unwrap();
@@ -320,6 +333,10 @@ mod tests {
         assert_eq!(
             config.l1_system_config_address,
             address!("94ee52a9d8edd72a85dea7fae3ba6d75e4bf1710")
+        );
+        assert_eq!(config.mantle_da_switch, true);
+        assert_eq!(config.datalayr_service_manager_addr,
+            address!("5BD63a7ECc13b955C4F57e3F12A64c10263C14c1")
         );
 
     }
