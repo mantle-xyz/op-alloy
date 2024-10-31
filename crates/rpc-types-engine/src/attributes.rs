@@ -30,7 +30,7 @@ pub struct OpPayloadAttributes {
     ///
     /// Prior to Holocene activation, this field should always be [None].
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub eip_1559_params: Option<B64>,
+    pub base_fee: Option<u128>,
 }
 
 /// Optimism Payload Attributes with parent block reference.
@@ -90,7 +90,7 @@ mod test {
             transactions: Some(vec![b"hello".to_vec().into()]),
             no_tx_pool: Some(true),
             gas_limit: Some(42),
-            eip_1559_params: None,
+            base_fee: Some(100_000),
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();
@@ -99,25 +99,4 @@ mod test {
         assert_eq!(attributes, de);
     }
 
-    #[test]
-    fn test_serde_roundtrip_attributes_post_holocene() {
-        let attributes = OpPayloadAttributes {
-            payload_attributes: PayloadAttributes {
-                timestamp: 0x1337,
-                prev_randao: B256::ZERO,
-                suggested_fee_recipient: Address::ZERO,
-                withdrawals: Default::default(),
-                parent_beacon_block_root: Some(B256::ZERO),
-            },
-            transactions: Some(vec![b"hello".to_vec().into()]),
-            no_tx_pool: Some(true),
-            gas_limit: Some(42),
-            eip_1559_params: Some(b64!("0000dead0000beef")),
-        };
-
-        let ser = serde_json::to_string(&attributes).unwrap();
-        let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
-
-        assert_eq!(attributes, de);
-    }
 }
