@@ -23,20 +23,6 @@ pub struct OpDepositReceipt<T = Log> {
         )
     )]
     pub deposit_nonce: Option<u64>,
-    /// Deposit receipt version for Optimism deposit transactions
-    ///
-    /// The deposit receipt version was introduced in Canyon to indicate an update to how
-    /// receipt hashes should be computed when set. The state transition process
-    /// ensures this is only set for post-Canyon deposit transactions.
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )
-    )]
-    pub deposit_receipt_version: Option<u64>,
 }
 
 impl OpDepositReceipt {
@@ -88,10 +74,6 @@ impl OpTxReceipt for OpDepositReceipt {
     fn deposit_nonce(&self) -> Option<u64> {
         self.deposit_nonce
     }
-
-    fn deposit_receipt_version(&self) -> Option<u64> {
-        self.deposit_receipt_version
-    }
 }
 
 /// [`OpDepositReceipt`] with calculated bloom filter, modified for the OP Stack.
@@ -142,9 +124,6 @@ impl OpTxReceipt for OpDepositReceiptWithBloom {
         self.receipt.deposit_nonce
     }
 
-    fn deposit_receipt_version(&self) -> Option<u64> {
-        self.receipt.deposit_receipt_version
-    }
 }
 
 impl From<OpDepositReceipt> for OpDepositReceiptWithBloom {
@@ -178,7 +157,6 @@ impl OpDepositReceiptWithBloom {
             + self.logs_bloom.length()
             + self.receipt.inner.logs.length()
             + self.receipt.deposit_nonce.map_or(0, |nonce| nonce.length())
-            + self.receipt.deposit_receipt_version.map_or(0, |version| version.length())
     }
 
     /// Returns the rlp header for the receipt payload.
@@ -195,9 +173,6 @@ impl OpDepositReceiptWithBloom {
         self.receipt.inner.logs.encode(out);
         if let Some(nonce) = self.receipt.deposit_nonce {
             nonce.encode(out);
-        }
-        if let Some(version) = self.receipt.deposit_receipt_version {
-            version.encode(out);
         }
     }
 
@@ -217,13 +192,10 @@ impl OpDepositReceiptWithBloom {
 
         let remaining = |b: &[u8]| rlp_head.payload_length - (started_len - b.len()) > 0;
         let deposit_nonce = remaining(b).then(|| alloy_rlp::Decodable::decode(b)).transpose()?;
-        let deposit_receipt_version =
-            remaining(b).then(|| alloy_rlp::Decodable::decode(b)).transpose()?;
 
         let receipt = OpDepositReceipt {
             inner: Receipt { status: success, cumulative_gas_used, logs },
             deposit_nonce,
-            deposit_receipt_version,
         };
 
         let this = Self { receipt, logs_bloom: bloom };
@@ -249,8 +221,7 @@ impl alloy_rlp::Encodable for OpDepositReceiptWithBloom {
             + self.receipt.inner.cumulative_gas_used.length()
             + self.logs_bloom.length()
             + self.receipt.inner.logs.length()
-            + self.receipt.deposit_nonce.map_or(0, |nonce| nonce.length())
-            + self.receipt.deposit_receipt_version.map_or(0, |version| version.length());
+            + self.receipt.deposit_nonce.map_or(0, |nonce| nonce.length());
         payload_length + length_of_length(payload_length)
     }
 }
@@ -279,7 +250,6 @@ where
                 logs: Vec::<T>::arbitrary(u)?,
             },
             deposit_nonce,
-            deposit_receipt_version,
         })
     }
 }

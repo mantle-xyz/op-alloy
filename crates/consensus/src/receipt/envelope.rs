@@ -76,7 +76,6 @@ impl OpReceiptEnvelope<Log> {
                     receipt: OpDepositReceipt {
                         inner: inner_receipt,
                         deposit_nonce,
-                        deposit_receipt_version,
                     },
                     logs_bloom,
                 };
@@ -132,11 +131,6 @@ impl<T> OpReceiptEnvelope<T> {
     /// Return the receipt's deposit_nonce if it is a deposit receipt.
     pub fn deposit_nonce(&self) -> Option<u64> {
         self.as_deposit_receipt().and_then(|r| r.deposit_nonce)
-    }
-
-    /// Return the receipt's deposit version if it is a deposit receipt.
-    pub fn deposit_receipt_version(&self) -> Option<u64> {
-        self.as_deposit_receipt().and_then(|r| r.deposit_receipt_version)
     }
 
     /// Returns the deposit receipt if it is a deposit receipt.
@@ -365,6 +359,5 @@ mod tests {
         assert_eq!(receipt.logs().len(), 0);
         assert_eq!(receipt.tx_type(), OpTxType::Deposit);
         assert_eq!(receipt.deposit_nonce(), Some(1));
-        assert_eq!(receipt.deposit_receipt_version(), Some(2));
     }
 }

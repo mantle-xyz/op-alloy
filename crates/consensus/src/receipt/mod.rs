@@ -10,9 +10,6 @@ pub use receipts::{OpDepositReceipt, OpDepositReceiptWithBloom};
 pub trait OpTxReceipt: TxReceipt {
     /// Returns the deposit nonce of the transaction.
     fn deposit_nonce(&self) -> Option<u64>;
-
-    /// Returns the deposit receipt version of the transaction.
-    fn deposit_receipt_version(&self) -> Option<u64>;
 }
 
 #[cfg(test)]
@@ -82,7 +79,6 @@ mod tests {
                         }],
                     },
                     deposit_nonce: None,
-                    deposit_receipt_version: None,
                 },
                 logs_bloom: [0; 256].into(),
             };
@@ -119,7 +115,6 @@ mod tests {
                 ],
             },
             deposit_nonce: None,
-            deposit_receipt_version: None,
         }
         .with_bloom();
 
@@ -142,7 +137,6 @@ mod tests {
             receipt: OpDepositReceipt {
                 inner: Receipt { cumulative_gas_used: 46913, logs: vec![], status: true.into() },
                 deposit_nonce: Some(4012991),
-                deposit_receipt_version: None,
             },
             logs_bloom: [0; 256].into(),
         };
@@ -164,7 +158,6 @@ mod tests {
             receipt: OpDepositReceipt {
                 inner: Receipt { cumulative_gas_used: 46913, logs: vec![], status: true.into() },
                 deposit_nonce: Some(4012991),
-                deposit_receipt_version: Some(1),
             },
             logs_bloom: [0; 256].into(),
         };
