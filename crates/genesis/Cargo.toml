@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-genesis"
+name = "op-alloy-genesis"
 description = "Mantle genesis types"
 
 version.workspace = true

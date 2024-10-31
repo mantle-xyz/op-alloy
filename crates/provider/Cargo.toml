@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-provider"
+name = "op-alloy-provider"
 description = "Interface with an OP Stack blockchain"
 
 version.workspace = true
@@ -16,7 +16,7 @@ workspace = true
 
 [dependencies]
 # Workspace
-mantle-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
+op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # Alloy
 alloy-primitives = { workspace = true, features = ["rlp", "serde"] }

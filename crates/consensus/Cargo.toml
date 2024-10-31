@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-consensus"
+name = "op-alloy-consensus"
 description = "Mantle alloy consensus types"
 
 version.workspace = true

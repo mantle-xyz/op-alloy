@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-network"
+name = "op-alloy-network"
 description = "Mantle blockchain RPC behavior abstraction"
 
 version.workspace = true
@@ -16,8 +16,8 @@ workspace = true
 
 [dependencies]
 # Workspace
-mantle-alloy-consensus.workspace = true
-mantle-alloy-rpc-types.workspace = true
+op-alloy-consensus.workspace = true
+op-alloy-rpc-types.workspace = true
 
 # Alloy
 alloy-consensus.workspace = true

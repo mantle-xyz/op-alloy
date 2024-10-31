@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-rpc-types"
+name = "op-alloy-rpc-types"
 description = "Mantle RPC types"
 
 version.workspace = true
@@ -16,7 +16,7 @@ workspace = true
 
 [dependencies]
 # Workspace
-mantle-alloy-consensus = { workspace = true, features = ["serde"] }
+op-alloy-consensus = { workspace = true, features = ["serde"] }
 
 # Alloy
 alloy-primitives = { workspace = true, features = ["map", "rlp", "serde"] }

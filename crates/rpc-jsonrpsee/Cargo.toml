@@ -1,5 +1,5 @@
 [package]
-name = "mantle-alloy-rpc-jsonrpsee"
+name = "op-alloy-rpc-jsonrpsee"
 description = "Mantle RPC Client"
 
 version.workspace = true
@@ -16,7 +16,7 @@ workspace = true
 
 [dependencies]
 # Alloy
-mantle-alloy-rpc-types.workspace = true
+op-alloy-rpc-types.workspace = true
 alloy-eips.workspace = true
 alloy-primitives.workspace = true
 

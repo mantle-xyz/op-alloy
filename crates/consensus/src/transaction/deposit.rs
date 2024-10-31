@@ -410,7 +410,7 @@ pub(super) mod serde_bincode_compat {
     ///
     /// Intended to use with the [`serde_with::serde_as`] macro in the following way:
     /// ```rust
-    /// use mantle_alloy_consensus::{serde_bincode_compat, TxDeposit};
+    /// use op_alloy_consensus::{serde_bincode_compat, TxDeposit};
     /// use serde::{Deserialize, Serialize};
     /// use serde_with::serde_as;
     ///

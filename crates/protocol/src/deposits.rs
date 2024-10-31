@@ -6,7 +6,7 @@ use alloy_primitives::{b256, keccak256, Address, Bytes, Log, TxKind, B256, U256,
 use alloy_rlp::Encodable;
 use core::fmt::Display;
 use std::ascii::escape_default;
-use mantle_alloy_consensus::{OpTxEnvelope, TxDeposit};
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 /// Deposit log event abi signature.
 pub const DEPOSIT_EVENT_ABI: &str = "TransactionDeposited(address,address,uint256,bytes)";
@@ -24,7 +24,7 @@ pub const DEPOSIT_EVENT_VERSION_0: B256 = B256::ZERO;
 /// The version for mantle native token use mnt
 pub const DEPOSIT_EVENT_VERSION_1: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
 
-/// An [mantle_alloy_consensus::TxDeposit] validation error.
+/// An [op_alloy_consensus::TxDeposit] validation error.
 #[derive(Debug, PartialEq, Eq)]
 pub enum DepositError {
     /// Unexpected number of deposit event log topics.

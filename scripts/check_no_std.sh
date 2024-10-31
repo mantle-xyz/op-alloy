@@ -2,11 +2,11 @@
 set -eo pipefail
 
 no_std_packages=(
-  mantle-alloy-consensus
-  mantle-alloy-protocol
-  mantle-alloy-genesis
-  mantle-alloy-rpc-types
-  mantle-alloy-rpc-types-engine
+  op-alloy-consensus
+  op-alloy-protocol
+  op-alloy-genesis
+  op-alloy-rpc-types
+  op-alloy-rpc-types-engine
 )
 
 for package in "${no_std_packages[@]}"; do
