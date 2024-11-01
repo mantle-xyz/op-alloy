@@ -71,7 +71,7 @@ impl TxDeposit {
             is_system_transaction: Decodable::decode(buf)?,
             eth_value: Self::decode_mint(buf)?,
             input: Decodable::decode(buf)?,
-            eth_tx_value: Self::decode_mint(buf)?,
+            eth_tx_value: Self::decode_eth_tx_value(buf)?,
         })
     }
 
@@ -83,6 +83,15 @@ impl TxDeposit {
         } else {
             Ok(Some(Decodable::decode(buf)?))
         }
+    }
+
+    /// decode eth_tx_value function
+    /// sometime is nil
+    pub fn decode_eth_tx_value(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
+        if buf.is_empty() {
+            return Ok(None);
+        }
+        Self::decode_mint(buf)
     }
 
 
@@ -98,7 +107,7 @@ impl TxDeposit {
             + self.is_system_transaction.length()
             + self.input.0.length()
             + self.eth_value.map_or(1, |eth| eth.length())
-            + self.eth_tx_value.map_or(1, |eth| eth.length())
+            + self.eth_tx_value.map_or(0, |eth| eth.length())
     }
 
     /// Encodes only the transaction's fields into the desired buffer, without a RLP header.
@@ -123,8 +132,6 @@ impl TxDeposit {
         self.input.encode(out);
         if let Some(eth_tx_value) = self.eth_tx_value {
             eth_tx_value.encode(out);
-        } else {
-            out.put_u8(EMPTY_STRING_CODE);
         }
     }
 
