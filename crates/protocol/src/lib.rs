@@ -53,4 +53,8 @@ pub use fee::{
 };
 
 mod batch;
-pub use batch::{BatchValidationProvider, SingleBatch};
+pub use batch::{
+    Batch, BatchDecodingError, BatchValidationProvider, BatchValidity,
+    BatchWithInclusionBlock, SingleBatch,
+    SpanBatchError, SpanDecodingError,
+};

@@ -14,4 +14,7 @@ pub use errors::{BatchDecodingError, SpanBatchError, SpanDecodingError};
 
 
 mod validity;
+mod inclusion;
+pub use inclusion::BatchWithInclusionBlock;
+
 pub use validity::BatchValidity;
