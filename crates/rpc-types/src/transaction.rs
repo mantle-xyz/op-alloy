@@ -32,6 +32,12 @@ pub struct Transaction {
     /// Deposit receipt version for deposit transactions post-canyon
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_receipt_version: Option<u64>,
+    /// The ETH value to mint on L2
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub eth_value: Option<u128>,
+    /// The ETH value to send to account
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub eth_tx_value: Option<u128>,
 }
 
 impl ConsensusTransaction for Transaction {
@@ -144,6 +150,12 @@ pub struct OpTransactionFields {
     /// Deposit receipt version for deposit transactions post-canyon
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_receipt_version: Option<u64>,
+    /// The ETH value to mint on l2
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub eth_value: Option<u128>,
+    /// The ETH value which send to to_account on L2
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub eth_tx_value: Option<u128>,
 }
 
 impl From<OpTransactionFields> for OtherFields {
@@ -292,6 +304,8 @@ impl TryFrom<Transaction> for OpTxEnvelope {
                         TransactionConversionError::MissingRequiredField("is_system_tx".to_string())
                     })?,
                     input: value.inner.input,
+                    eth_tx_value: value.eth_tx_value,
+                    eth_value: value.eth_value,
                 };
                 Ok(Self::Deposit(deposit_tx))
             }

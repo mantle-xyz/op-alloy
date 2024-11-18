@@ -251,6 +251,8 @@ impl L1BlockInfoTx {
             gas_limit: 150_000_000,
             is_system_transaction: true,
             input: l1_info.encode_calldata(),
+            eth_tx_value: None,
+            eth_value: None,
         };
 
         // With the regolith hardfork, system transactions were deprecated, and we allocate
