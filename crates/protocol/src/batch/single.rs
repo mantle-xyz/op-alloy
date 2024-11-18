@@ -40,19 +40,12 @@ impl SingleBatch {
         &self,
         cfg: &RollupConfig,
         l2_safe_head: L2BlockInfo,
-        inclusion_block: &BlockInfo,
     ) -> BatchValidity {
         let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
         if self.timestamp > next_timestamp {
-            if cfg.is_holocene_active(inclusion_block.timestamp) {
-                return BatchValidity::Drop;
-            }
             return BatchValidity::Future;
         }
         if self.timestamp < next_timestamp {
-            if cfg.is_holocene_active(inclusion_block.timestamp) {
-                return BatchValidity::Past;
-            }
             return BatchValidity::Drop;
         }
         BatchValidity::Accept
@@ -78,7 +71,7 @@ impl SingleBatch {
         let epoch = l1_blocks[0];
 
         // If the batch is not accepted by the timestamp check, return the result.
-        let timestamp_check = self.check_batch_timestamp(cfg, l2_safe_head, inclusion_block);
+        let timestamp_check = self.check_batch_timestamp(cfg, l2_safe_head);
         if !timestamp_check.is_accept() {
             return timestamp_check;
         }

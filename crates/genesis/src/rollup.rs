@@ -147,6 +147,11 @@ impl RollupConfig {
             _ => None,
         }
     }
+
+    /// Returns the max sequencer drift for the given timestamp.
+    pub fn max_sequencer_drift(&self, timestamp: u64) -> u64 {
+        self.max_sequencer_drift
+    }
 }
 
 /// The [RollupConfig] for MANTLE Mainnet.
