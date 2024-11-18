@@ -152,6 +152,16 @@ impl RollupConfig {
     pub fn max_sequencer_drift(&self, timestamp: u64) -> u64 {
         self.max_sequencer_drift
     }
+
+    /// Returns the max rlp bytes per channel for the given timestamp.
+    pub fn max_rlp_bytes_per_channel(&self, timestamp: u64) -> u64 {
+        MAX_RLP_BYTES_PER_CHANNEL_BEDROCK
+    }
+
+    /// Returns the channel timeout for the given timestamp.
+    pub fn channel_timeout(&self, timestamp: u64) -> u64 {
+        self.channel_timeout
+    }
 }
 
 /// The [RollupConfig] for MANTLE Mainnet.
