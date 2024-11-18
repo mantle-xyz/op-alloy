@@ -41,8 +41,6 @@ pub struct OpAttributesWithParent {
     pub attributes: OpPayloadAttributes,
     /// The parent block reference.
     pub parent: L2BlockInfo,
-    /// Whether the current batch is the last in its span.
-    pub is_last_in_span: bool,
 }
 
 impl OpAttributesWithParent {
@@ -50,9 +48,8 @@ impl OpAttributesWithParent {
     pub const fn new(
         attributes: OpPayloadAttributes,
         parent: L2BlockInfo,
-        is_last_in_span: bool,
     ) -> Self {
-        Self { attributes, parent, is_last_in_span }
+        Self { attributes, parent }
     }
 
     /// Returns the payload attributes.
@@ -65,10 +62,6 @@ impl OpAttributesWithParent {
         &self.parent
     }
 
-    /// Returns whether the current batch is the last in its span.
-    pub const fn is_last_in_span(&self) -> bool {
-        self.is_last_in_span
-    }
 }
 
 #[cfg(all(test, feature = "serde"))]
