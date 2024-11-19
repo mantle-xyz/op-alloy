@@ -11,9 +11,6 @@ use crate::{
 /// The max rlp bytes per channel for the Bedrock hardfork.
 pub const MAX_RLP_BYTES_PER_CHANNEL_BEDROCK: u64 = 10_000_000;
 
-
-
-
 /// Returns the rollup config for the given chain ID.
 pub fn rollup_config_from_chain_id(chain_id: u64) -> Result<RollupConfig, &'static str> {
     chain_id.try_into()
@@ -134,7 +131,7 @@ impl RollupConfig {
         self.regolith_time.map_or(false, |t| timestamp >= t)
     }
 
-    pub fn is_cancun_active(&self, timestamp: u64) -> bool {
+    pub fn is_shanghai_active(&self, timestamp: u64) -> bool {
         self.shanghai_time.map_or(false, |t| timestamp >= t)
     }
 
