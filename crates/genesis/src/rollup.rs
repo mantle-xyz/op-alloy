@@ -76,9 +76,9 @@ pub struct RollupConfig {
     pub mantle_da_switch:bool,
     /// `datalayr_service_manager_addr` is the mantle da manager address that the data availability contract.
     pub datalayr_service_manager_addr: Address,
-    /// `cancun_time` defined here just for mantle revm to use. no config in mantle rollup config file, actually.
+    /// `shanghai_time` defined here just for mantle revm to use. no config in mantle rollup config file, actually.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub cancun_time: Option<u64>,
+    pub shanghai_time: Option<u64>,
 
 }
 
@@ -100,7 +100,7 @@ impl<'a> arbitrary::Arbitrary<'a> for RollupConfig {
             l1_system_config_address: Address::arbitrary(u)?,
             mantle_da_switch: u.arbitrary()?,
             datalayr_service_manager_addr: Address::default(),
-            cancun_time: Option::<u64>::arbitrary(u)?,
+            shanghai_time: Option::<u64>::arbitrary(u)?,
         })
     }
 }
@@ -123,7 +123,7 @@ impl Default for RollupConfig {
             l1_system_config_address: Address::ZERO,
             mantle_da_switch: false,
             datalayr_service_manager_addr: Address::ZERO,
-            cancun_time: None,
+            shanghai_time: None,
         }
     }
 }
@@ -135,7 +135,7 @@ impl RollupConfig {
     }
 
     pub fn is_cancun_active(&self, timestamp: u64) -> bool {
-        self.cancun_time.map_or(false, |t| timestamp >= t)
+        self.shanghai_time.map_or(false, |t| timestamp >= t)
     }
 
 
@@ -197,7 +197,7 @@ pub const MANTLE_MAINNET_CONFIG: RollupConfig = RollupConfig {
     l1_system_config_address: address!("427ea0710fa5252057f0d88274f7aeb308386caf"),
     mantle_da_switch: true,
     datalayr_service_manager_addr: address!("5BD63a7ECc13b955C4F57e3F12A64c10263C14c1"),
-    cancun_time: Some(0_u64),
+    shanghai_time: Some(0_u64),
 };
 
 /// The [RollupConfig] for MANTLE Sepolia.
@@ -233,7 +233,7 @@ pub const MANTLE_SEPOLIA_CONFIG: RollupConfig = RollupConfig {
     l1_system_config_address: address!("04b34526c91424e955d13c7226bc4385e57e6706"),
     mantle_da_switch: true,
     datalayr_service_manager_addr: address!("d7f17171896461A6EB74f95DF3f9b0D966A8a907"),
-    cancun_time: Some(0),
+    shanghai_time: Some(0),
 };
 
 

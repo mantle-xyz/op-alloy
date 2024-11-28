@@ -215,7 +215,7 @@ impl ChainConfig {
                 .as_ref()
                 .map(|a| a.datalayr_service_manager_addr)
                 .unwrap_or_default(),
-            cancun_time: Some(0),
+            shanghai_time: Some(0),
         }
     }
 }
