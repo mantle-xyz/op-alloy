@@ -3,7 +3,7 @@ use alloy_primitives::{BlockHash, B256};
 use alloy_provider::Provider;
 use alloy_rpc_types_engine::{
     ClientVersionV1, ExecutionPayloadBodiesV1, ExecutionPayloadEnvelopeV2, ExecutionPayloadInputV2,
-    ExecutionPayloadV3, ExecutionPayloadV4, ForkchoiceState, ForkchoiceUpdated, PayloadId,
+    ExecutionPayloadV3, ForkchoiceState, ForkchoiceUpdated, PayloadId,
     PayloadStatus,
 };
 use alloy_transport::{Transport, TransportResult};
@@ -54,7 +54,7 @@ pub trait OpEngineApi<N, T>: Send + Sync {
     /// OP modifications: TODO
     async fn new_payload_v4(
         &self,
-        payload: ExecutionPayloadV4,
+        payload: ExecutionPayloadV3,
         parent_beacon_block_root: B256,
     ) -> TransportResult<PayloadStatus>;
 
@@ -218,7 +218,7 @@ where
 
     async fn new_payload_v4(
         &self,
-        payload: ExecutionPayloadV4,
+        payload: ExecutionPayloadV3,
         parent_beacon_block_root: B256,
     ) -> TransportResult<PayloadStatus> {
         // Note: The `versioned_hashes` parameter is always an empty array for OP chains.

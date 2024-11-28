@@ -1,19 +1,26 @@
 //! Optimism specific types related to transactions.
-
+use alloy_consensus::Transaction as _;
+use alloy_consensus::TxEnvelope;
 use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization};
-use alloy_primitives::{BlockHash, ChainId, TxKind, B256, U256};
-use alloy_rpc_types_eth::Signature;
+use alloy_primitives::{Address, BlockHash, ChainId, TxKind, B256, U256};
+use alloy_primitives::Bytes;
+use alloy_primitives::private::derive_more;
 use alloy_serde::OtherFields;
 use serde::{Deserialize, Serialize};
+use op_alloy_consensus::OpTxEnvelope;
+
+mod request;
+pub use request::OpTransactionRequest;
 
 /// OP Transaction type
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, derive_more::Deref, derive_more::DerefMut)]
+#[cfg_attr(all(any(test, feature = "arbitrary"), feature = "k256"), derive(arbitrary::Arbitrary))]
 #[serde(rename_all = "camelCase")]
 pub struct Transaction {
     /// Ethereum Transaction Types
-    #[serde(flatten)]
-    pub inner: alloy_rpc_types_eth::Transaction,
+    #[deref]
+    #[deref_mut]
+    pub inner: alloy_rpc_types_eth::Transaction<OpTxEnvelope>,
     /// The MNT value to mint on L2
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub mint: Option<u128>,
@@ -65,7 +72,20 @@ impl alloy_consensus::Transaction for Transaction {
         self.inner.priority_fee_or_price()
     }
 
-    fn to(&self) -> TxKind {
+    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
+        self.inner.effective_gas_price(base_fee)
+
+    }
+
+    fn is_dynamic_fee(&self) -> bool {
+        self.inner.is_dynamic_fee()
+    }
+
+    fn kind(&self) -> TxKind {
+        self.inner.kind()
+    }
+
+    fn to(&self) -> Option<Address> {
         self.inner.to()
     }
 
@@ -73,7 +93,7 @@ impl alloy_consensus::Transaction for Transaction {
         self.inner.value()
     }
 
-    fn input(&self) -> &[u8] {
+    fn input(&self) -> &Bytes {
         self.inner.input()
     }
 
@@ -95,7 +115,6 @@ impl alloy_consensus::Transaction for Transaction {
 }
 
 impl alloy_network_primitives::TransactionResponse for Transaction {
-    type Signature = Signature;
 
     fn tx_hash(&self) -> alloy_primitives::TxHash {
         self.inner.tx_hash()
@@ -113,17 +132,14 @@ impl alloy_network_primitives::TransactionResponse for Transaction {
         self.inner.transaction_index()
     }
 
-    fn from(&self) -> alloy_primitives::Address {
+    fn from(&self) -> Address {
         self.inner.from()
     }
 
-    fn to(&self) -> Option<alloy_primitives::Address> {
-        self.inner.to()
+    fn to(&self) -> Option<Address> {
+        alloy_consensus::Transaction::to(&self.inner)
     }
 
-    fn signature(&self) -> Option<Self::Signature> {
-        self.inner.signature()
-    }
 }
 
 /// Optimism specific transaction fields
@@ -152,5 +168,11 @@ pub struct OpTransactionFields {
 impl From<OpTransactionFields> for OtherFields {
     fn from(value: OpTransactionFields) -> Self {
         serde_json::to_value(value).unwrap().try_into().unwrap()
+    }
+}
+
+impl AsRef<OpTxEnvelope> for Transaction {
+    fn as_ref(&self) -> &OpTxEnvelope {
+        self.inner.as_ref()
     }
 }

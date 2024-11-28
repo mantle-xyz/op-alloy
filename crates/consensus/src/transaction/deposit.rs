@@ -1,11 +1,12 @@
-use super::OpTxType;
+use super::{DepositTransaction, OpTxType};
 use alloy_consensus::Transaction;
 use alloy_eips::eip2930::AccessList;
-use alloy_primitives::{Address, Bytes, ChainId, TxKind, B256, U256};
+use alloy_primitives::{keccak256, Address, Bytes, ChainId, Sealable, PrimitiveSignature as Signature, TxHash, TxKind, B256, U256};
 use alloy_rlp::{
     Buf, BufMut, Decodable, Encodable, Error as DecodeError, Header, EMPTY_STRING_CODE,
 };
 use core::mem;
+use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
 
 /// Deposit transactions, also known as deposits are initiated on L1, and executed on L2.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -43,6 +44,25 @@ pub struct TxDeposit {
     pub eth_tx_value: Option<u128>,
 
 }
+
+impl DepositTransaction for TxDeposit {
+    fn source_hash(&self) -> Option<B256> {
+        Some(self.source_hash)
+    }
+
+    fn mint(&self) -> Option<u128> {
+        self.mint
+    }
+
+    fn is_system_transaction(&self) -> bool {
+        self.is_system_transaction
+    }
+
+    fn is_deposit(&self) -> bool {
+        true
+    }
+}
+
 
 impl TxDeposit {
     /// Decodes the inner [TxDeposit] fields from RLP bytes.
@@ -155,6 +175,47 @@ impl TxDeposit {
         OpTxType::Deposit
     }
 
+
+    /// Create an rlp header for the transaction.
+    fn rlp_header(&self) -> Header {
+        Header { list: true, payload_length: self.fields_len() }
+    }
+
+
+
+    /// RLP encodes the transaction.
+    pub fn rlp_encode(&self, out: &mut dyn BufMut) {
+        self.rlp_header().encode(out);
+        self.encode_fields(out);
+    }
+
+    /// Get the length of the transaction when RLP encoded.
+    pub fn rlp_encoded_length(&self) -> usize {
+        self.rlp_header().length_with_payload()
+    }
+
+    /// Get the length of the transaction when EIP-2718 encoded. This is the
+    /// 1 byte type flag + the length of the RLP encoded transaction.
+    pub fn eip2718_encoded_length(&self) -> usize {
+        self.rlp_encoded_length() + 1
+    }
+
+    fn network_header(&self) -> Header {
+        Header { list: false, payload_length: self.eip2718_encoded_length() }
+    }
+
+    /// Get the length of the transaction when network encoded. This is the
+    /// EIP-2718 encoded length with an outer RLP header.
+    pub fn network_encoded_length(&self) -> usize {
+        self.network_header().length_with_payload()
+    }
+
+    /// Network encode the transaction with the given signature.
+    pub fn network_encode(&self, out: &mut dyn BufMut) {
+        self.network_header().encode(out);
+        self.encode_2718(out);
+    }
+
     /// Inner encoding function that is used for both rlp [`Encodable`] trait and for calculating
     /// hash that for eip2718 does not require rlp header
     pub fn encode_inner(&self, out: &mut dyn BufMut, with_header: bool) {
@@ -171,6 +232,15 @@ impl TxDeposit {
         header.encode(out);
         self.encode_fields(out);
     }
+
+
+    /// Calculate the transaction hash.
+    pub fn tx_hash(&self) -> TxHash {
+        let mut buf = Vec::with_capacity(self.eip2718_encoded_length());
+        self.encode_2718(&mut buf);
+        keccak256(&buf)
+    }
+
 
     /// Output the length of the RLP signed transaction encoding.
     ///
@@ -190,6 +260,15 @@ impl TxDeposit {
             inner_payload_length
         }
     }
+
+
+    /// Returns the signature for the optimism deposit transactions, which don't include a
+    /// signature.
+    pub fn signature() -> Signature {
+        Signature::new(U256::ZERO, U256::ZERO, false)
+    }
+
+
 }
 
 impl Transaction for TxDeposit {
@@ -225,7 +304,15 @@ impl Transaction for TxDeposit {
         0
     }
 
-    fn to(&self) -> TxKind {
+    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
+        0
+    }
+
+    fn is_dynamic_fee(&self) -> bool {
+        false
+    }
+
+    fn kind(&self) -> TxKind {
         self.to
     }
 
@@ -233,7 +320,7 @@ impl Transaction for TxDeposit {
         self.value
     }
 
-    fn input(&self) -> &[u8] {
+    fn input(&self) -> &Bytes {
         &self.input
     }
 
@@ -277,6 +364,66 @@ impl Decodable for TxDeposit {
 
         Self::decode_fields(data)
     }
+}
+
+impl Encodable2718 for TxDeposit {
+    fn type_flag(&self) -> Option<u8> {
+        Some(OpTxType::Deposit as u8)
+    }
+
+    fn encode_2718_len(&self) -> usize {
+        self.eip2718_encoded_length()
+    }
+
+    fn encode_2718(&self, out: &mut dyn alloy_rlp::BufMut) {
+        out.put_u8(self.tx_type() as u8);
+        self.rlp_encode(out);
+    }
+}
+
+impl Decodable2718 for TxDeposit {
+    fn typed_decode(ty: u8, data: &mut &[u8]) -> Eip2718Result<Self> {
+        let ty: OpTxType = ty.try_into().map_err(|_| Eip2718Error::UnexpectedType(ty))?;
+        if ty != OpTxType::Deposit as u8 {
+            return Err(Eip2718Error::UnexpectedType(ty as u8));
+        }
+        let tx = Self::decode(data)?;
+        Ok(tx)
+    }
+
+    fn fallback_decode(data: &mut &[u8]) -> Eip2718Result<Self> {
+        let tx = Self::decode(data)?;
+        Ok(tx)
+    }
+}
+
+impl Sealable for TxDeposit {
+    fn hash_slow(&self) -> B256 {
+        self.tx_hash()
+    }
+}
+
+/// Deposit transactions don't have a signature, however, we include an empty signature in the
+/// response for better compatibility.
+///
+/// This function can be used as `serialize_with` serde attribute for the [`TxDeposit`] and will
+/// flatten [`TxDeposit::signature`] into response.
+#[cfg(feature = "serde")]
+pub fn serde_deposit_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
+    value: &T,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct SerdeHelper<'a, T> {
+        #[serde(flatten)]
+        value: &'a T,
+        #[serde(flatten)]
+        signature: Signature,
+    }
+
+    SerdeHelper { value, signature: TxDeposit::signature() }.serialize(serializer)
 }
 
 #[cfg(test)]

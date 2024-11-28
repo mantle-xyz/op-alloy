@@ -1,7 +1,7 @@
 //! Optimism execution payload envelope V3.
 
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types_engine::{BlobsBundleV1, ExecutionPayloadV4};
+use alloy_rpc_types_engine::{BlobsBundleV1, ExecutionPayloadV3};
 
 /// This structure maps for the return value of `engine_getPayload` of the beacon chain spec, for
 /// V4.
@@ -13,7 +13,7 @@ use alloy_rpc_types_engine::{BlobsBundleV1, ExecutionPayloadV4};
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct OpExecutionPayloadEnvelopeV4 {
     /// Execution payload V4
-    pub execution_payload: ExecutionPayloadV4,
+    pub execution_payload: ExecutionPayloadV3,
     /// The expected value to be received by the feeRecipient in wei
     pub block_value: U256,
     /// The blobs, commitments, and proofs associated with the executed payload.
