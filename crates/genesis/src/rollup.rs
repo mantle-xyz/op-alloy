@@ -134,7 +134,7 @@ impl RollupConfig {
         self.regolith_time.map_or(false, |t| timestamp >= t)
     }
 
-    pub fn is_cancun_active(&self, timestamp: u64) -> bool {
+    pub fn is_shanghai_active(&self, timestamp: u64) -> bool {
         self.shanghai_time.map_or(false, |t| timestamp >= t)
     }
 
