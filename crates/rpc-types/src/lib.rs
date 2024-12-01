@@ -20,4 +20,5 @@ pub mod transaction;
 
 pub use receipt::{OpTransactionReceipt, OpTransactionReceiptFields};
 pub use transaction::{OpTransactionFields,OpTransactionRequest, Transaction};
-
+pub use output::OutputResponse;
+pub use safe_head::SafeHeadResponse;
