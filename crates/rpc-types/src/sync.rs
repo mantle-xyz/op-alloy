@@ -65,6 +65,10 @@ pub struct SyncStatus {
     pub finalized_l2: L2BlockRef,
     /// The pending safe L2 block ref.
     pub pending_safe_l2: L2BlockRef,
+    /// The queued unsafe L2 block ref.
+    pub queued_unsafe_l2: L2BlockRef,
+    /// The target L2 block need to sync.
+    pub engine_sync_target: L2BlockRef,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
