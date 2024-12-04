@@ -45,7 +45,6 @@ pub struct L1BlockRef {
 ///
 /// [ss]: https://github.com/ethereum-optimism/optimism/blob/develop/op-service/eth/sync_status.go#L5
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SyncStatus {
     /// The current L1 block.
     pub current_l1: L1BlockRef,
@@ -63,8 +62,6 @@ pub struct SyncStatus {
     pub safe_l2: L2BlockRef,
     /// The finalized L2 block ref.
     pub finalized_l2: L2BlockRef,
-    /// The pending safe L2 block ref.
-    pub pending_safe_l2: L2BlockRef,
     /// The queued unsafe L2 block ref.
     pub queued_unsafe_l2: L2BlockRef,
     /// The target L2 block need to sync.
@@ -72,7 +69,6 @@ pub struct SyncStatus {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
-#[serde(rename_all = "camelCase")]
 pub struct Origin {
     /// The block hash.
     pub hash: B256,
