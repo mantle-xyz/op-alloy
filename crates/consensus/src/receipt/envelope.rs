@@ -3,6 +3,7 @@ use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, TxReceipt};
 use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
 use alloy_primitives::{logs_bloom, Bloom, Log};
 use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
+use alloc::vec::Vec;
 
 /// Receipt envelope, as defined in [EIP-2718], modified for OP Stack chains.
 ///
@@ -52,7 +53,6 @@ impl OpReceiptEnvelope<Log> {
         logs: impl IntoIterator<Item = &'a Log>,
         tx_type: OpTxType,
         deposit_nonce: Option<u64>,
-        deposit_receipt_version: Option<u64>,
     ) -> Self {
         let logs = logs.into_iter().cloned().collect::<Vec<_>>();
         let logs_bloom = logs_bloom(&logs);
@@ -73,10 +73,7 @@ impl OpReceiptEnvelope<Log> {
             }
             OpTxType::Deposit => {
                 let inner = OpDepositReceiptWithBloom {
-                    receipt: OpDepositReceipt {
-                        inner: inner_receipt,
-                        deposit_nonce,
-                    },
+                    receipt: OpDepositReceipt { inner: inner_receipt, deposit_nonce },
                     logs_bloom,
                 };
                 Self::Deposit(inner)
@@ -299,7 +296,6 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,24 +313,27 @@ mod tests {
         let expected = hex!("f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff");
 
         let mut data = vec![];
-        let receipt =
-            OpReceiptEnvelope::Legacy(ReceiptWithBloom {
-                receipt: Receipt {
-                    status: false.into(),
-                    cumulative_gas_used: 0x1u128,
-                    logs: vec![Log {
-                        address: address!("0000000000000000000000000000000000000011"),
-                        data: LogData::new_unchecked(
-                            vec![
-                                b256!("000000000000000000000000000000000000000000000000000000000000dead"),
-                                b256!("000000000000000000000000000000000000000000000000000000000000beef"),
-                            ],
-                            bytes!("0100ff"),
-                        ),
-                    }],
-                },
-                logs_bloom: [0; 256].into(),
-            });
+        let receipt = OpReceiptEnvelope::Legacy(ReceiptWithBloom {
+            receipt: Receipt {
+                status: false.into(),
+                cumulative_gas_used: 0x1u128,
+                logs: vec![Log {
+                    address: address!("0000000000000000000000000000000000000011"),
+                    data: LogData::new_unchecked(
+                        vec![
+                            b256!(
+                                "000000000000000000000000000000000000000000000000000000000000dead"
+                            ),
+                            b256!(
+                                "000000000000000000000000000000000000000000000000000000000000beef"
+                            ),
+                        ],
+                        bytes!("0100ff"),
+                    ),
+                }],
+            },
+            logs_bloom: [0; 256].into(),
+        });
 
         receipt.network_encode(&mut data);
 
@@ -346,7 +345,7 @@ mod tests {
     #[test]
     fn legacy_receipt_from_parts() {
         let receipt =
-            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Legacy, None, None);
+            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Legacy, None);
         assert!(receipt.status());
         assert_eq!(receipt.cumulative_gas_used(), 100);
         assert_eq!(receipt.logs().len(), 0);
@@ -356,7 +355,7 @@ mod tests {
     #[test]
     fn deposit_receipt_from_parts() {
         let receipt =
-            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Deposit, Some(1), Some(2));
+            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Deposit, Some(1));
         assert!(receipt.status());
         assert_eq!(receipt.cumulative_gas_used(), 100);
         assert_eq!(receipt.logs().len(), 0);

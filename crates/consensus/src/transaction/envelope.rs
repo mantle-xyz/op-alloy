@@ -1,12 +1,14 @@
-use alloy_consensus::{Signed, Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy};
-use alloy_consensus::transaction::RlpEcdsaTx;
+use alloy_consensus::{
+    transaction::RlpEcdsaTx, Sealable, Sealed, Signed, Transaction, TxEip1559, TxEip2930,
+    TxEip7702, TxLegacy,
+};
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
     eip2930::AccessList,
     eip7702::SignedAuthorization,
 };
-use alloy_primitives::{Address, Bytes, Sealable, Sealed, TxKind, B256, U256, U64, U8};
-use alloy_rlp::{BufMut, Decodable, Encodable, Header};
+use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
+use alloy_rlp::{Decodable, Encodable};
 use derive_more::Display;
 
 use crate::TxDeposit;
@@ -44,7 +46,8 @@ pub enum OpTxType {
 
 impl OpTxType {
     /// List of all variants.
-    pub const ALL: [Self; 4] = [Self::Legacy, Self::Eip2930, Self::Eip1559, Self::Deposit];
+    pub const ALL: [Self; 5] =
+        [Self::Legacy, Self::Eip2930, Self::Eip1559, Self::Eip7702, Self::Deposit];
 }
 
 #[cfg(any(test, feature = "arbitrary"))]
@@ -52,12 +55,6 @@ impl arbitrary::Arbitrary<'_> for OpTxType {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         let i = u.choose_index(Self::ALL.len())?;
         Ok(Self::ALL[i])
-    }
-}
-
-impl From<OpTxType> for U8 {
-    fn from(tx_type: OpTxType) -> Self {
-        Self::from(u8::from(tx_type))
     }
 }
 
@@ -75,58 +72,10 @@ impl TryFrom<u8> for OpTxType {
             0 => Self::Legacy,
             1 => Self::Eip2930,
             2 => Self::Eip1559,
+            4 => Self::Eip7702,
             126 => Self::Deposit,
             _ => return Err(Eip2718Error::UnexpectedType(value)),
         })
-    }
-}
-
-
-impl TryFrom<u64> for OpTxType {
-    type Error = &'static str;
-
-    fn try_from(value: u64) -> Result<Self, Self::Error> {
-        let err = || "invalid tx type";
-        let value: u8 = value.try_into().map_err(|_| err())?;
-        Self::try_from(value).map_err(|_| err())
-    }
-}
-
-impl TryFrom<U64> for OpTxType {
-    type Error = &'static str;
-
-    fn try_from(value: U64) -> Result<Self, Self::Error> {
-        value.to::<u64>().try_into()
-    }
-}
-
-impl PartialEq<u8> for OpTxType {
-    fn eq(&self, other: &u8) -> bool {
-        (*self as u8) == *other
-    }
-}
-
-impl PartialEq<OpTxType> for u8 {
-    fn eq(&self, other: &OpTxType) -> bool {
-        *self == *other as Self
-    }
-}
-
-impl Encodable for OpTxType {
-    fn encode(&self, out: &mut dyn BufMut) {
-        (*self as u8).encode(out);
-    }
-
-    fn length(&self) -> usize {
-        1
-    }
-}
-
-impl Decodable for OpTxType {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let ty = u8::decode(buf)?;
-
-        Self::try_from(ty).map_err(|_| alloy_rlp::Error::Custom("invalid transaction type"))
     }
 }
 
@@ -151,19 +100,14 @@ impl Decodable for OpTxType {
 #[non_exhaustive]
 pub enum OpTxEnvelope {
     /// An untagged [`TxLegacy`].
-    #[cfg_attr(feature = "serde", serde(rename = "0x0", alias = "0x00"))]
     Legacy(Signed<TxLegacy>),
     /// A [`TxEip2930`] tagged with type 1.
-    #[cfg_attr(feature = "serde", serde(rename = "0x1", alias = "0x01"))]
     Eip2930(Signed<TxEip2930>),
     /// A [`TxEip1559`] tagged with type 2.
-    #[cfg_attr(feature = "serde", serde(rename = "0x2", alias = "0x02"))]
     Eip1559(Signed<TxEip1559>),
     /// A [`TxEip7702`] tagged with type 4.
-    #[cfg_attr(feature = "serde", serde(rename = "0x4", alias = "0x04"))]
     Eip7702(Signed<TxEip7702>),
     /// A [`TxDeposit`] tagged with type 0x7E.
-    #[cfg_attr(feature = "serde", serde(rename = "0x7E", alias = "0x7E"))]
     Deposit(Sealed<TxDeposit>),
 }
 
@@ -462,7 +406,6 @@ impl OpTxEnvelope {
         }
     }
 
-
     /// Return the length of the inner txn, including type byte length
     pub fn eip2718_encoded_length(&self) -> usize {
         match self {
@@ -544,8 +487,6 @@ impl Encodable2718 for OpTxEnvelope {
         }
     }
 }
-
-
 
 #[cfg(feature = "serde")]
 mod serde_from {
