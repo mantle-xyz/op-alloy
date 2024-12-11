@@ -25,9 +25,11 @@ impl Batch {
         if r.is_empty() {
             return Err(BatchDecodingError::EmptyBuffer);
         }
+
+        r.advance(1);
+        
         let single_batch =
             SingleBatch::decode(r).map_err(BatchDecodingError::AlloyRlpError)?;
         Ok(Self::Single(single_batch))
-
     }
 }
