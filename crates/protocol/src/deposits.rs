@@ -5,8 +5,7 @@ use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{b256, keccak256, Address, Bytes, Log, Sealable, TxKind, B256, U256, U64};
 use alloy_rlp::Encodable;
 use core::fmt::Display;
-use std::ascii::escape_default;
-use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
+use op_alloy_consensus::TxDeposit;
 
 /// Deposit log event abi signature.
 pub const DEPOSIT_EVENT_ABI: &str = "TransactionDeposited(address,address,uint256,bytes)";
@@ -22,7 +21,8 @@ pub const DEPOSIT_EVENT_ABI_HASH: B256 =
 pub const DEPOSIT_EVENT_VERSION_0: B256 = B256::ZERO;
 
 /// The version for mantle native token use mnt
-pub const DEPOSIT_EVENT_VERSION_1: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
+pub const DEPOSIT_EVENT_VERSION_1: B256 =
+    b256!("0000000000000000000000000000000000000000000000000000000000000001");
 
 /// An [op_alloy_consensus::TxDeposit] validation error.
 #[derive(Debug, PartialEq, Eq)]
@@ -368,7 +368,7 @@ pub(crate) fn unmarshal_deposit_version0(
     let mut offset = 0;
 
     // u128 mint mnt value
-    tx.mint = decode_u128_field(data,offset,DepositError::MintDecode)?;
+    tx.mint = decode_u128_field(data, offset, DepositError::MintDecode)?;
     offset += 32;
 
     // uint256 value
@@ -376,7 +376,7 @@ pub(crate) fn unmarshal_deposit_version0(
     offset += 32;
 
     // u128 mint eth_value
-    tx.eth_value = decode_u128_field(data,offset,DepositError::EthValueDecode)?;
+    tx.eth_value = decode_u128_field(data, offset, DepositError::EthValueDecode)?;
     offset += 32;
 
     // uint64 gas
