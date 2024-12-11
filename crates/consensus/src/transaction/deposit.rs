@@ -1,12 +1,18 @@
 use super::{DepositTransaction, OpTxType};
 use alloy_consensus::Transaction;
-use alloy_eips::eip2930::AccessList;
-use alloy_primitives::{keccak256, Address, Bytes, ChainId, Sealable, PrimitiveSignature as Signature, TxHash, TxKind, B256, U256};
+use alloy_eips::{
+    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
+    eip2930::AccessList,
+};
+use alloy_primitives::{
+    keccak256, Address, Bytes, ChainId, PrimitiveSignature as Signature, Sealable, TxHash, TxKind,
+    B256, U256,
+};
 use alloy_rlp::{
     Buf, BufMut, Decodable, Encodable, Error as DecodeError, Header, EMPTY_STRING_CODE,
 };
 use core::mem;
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
+use alloc::vec::Vec;
 
 /// Deposit transactions, also known as deposits are initiated on L1, and executed on L2.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -31,18 +37,32 @@ pub struct TxDeposit {
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "gas"))]
     pub gas_limit: u64,
     /// Field indicating if this transaction is exempt from the L2 gas limit.
-    #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "isSystemTx"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            default,
+            with = "alloy_serde::quantity",
+            rename = "isSystemTx",
+            skip_serializing_if = "core::ops::Not::not"
+        )
+    )]
     pub is_system_transaction: bool,
     ///EthValue means L2 BVM_ETH mint tag, nil means that there is no need to mint BVM_ETH.
-    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt", rename = "ethValue"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethValue")
+    )]
     pub eth_value: Option<u128>,
     /// Input has two uses depending if transaction is Create or Call (if `to` field is None or
     /// Some).
     pub input: Bytes,
-    /// EthTxValue means L2 BVM_ETH tx tag, nil means that there is no need to transfer BVM_ETH to msg.To.
-    #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue"))]
+    /// EthTxValue means L2 BVM_ETH tx tag, nil means that there is no need to transfer BVM_ETH to
+    /// msg.To.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue")
+    )]
     pub eth_tx_value: Option<u128>,
-
 }
 
 impl DepositTransaction for TxDeposit {
@@ -62,7 +82,6 @@ impl DepositTransaction for TxDeposit {
         true
     }
 }
-
 
 impl TxDeposit {
     /// Decodes the inner [TxDeposit] fields from RLP bytes.
@@ -113,7 +132,6 @@ impl TxDeposit {
         }
         Self::decode_mint(buf)
     }
-
 
     /// Outputs the length of the transaction's fields, without a RLP header or length of the
     /// eip155 fields.
@@ -175,13 +193,10 @@ impl TxDeposit {
         OpTxType::Deposit
     }
 
-
     /// Create an rlp header for the transaction.
     fn rlp_header(&self) -> Header {
         Header { list: true, payload_length: self.fields_len() }
     }
-
-
 
     /// RLP encodes the transaction.
     pub fn rlp_encode(&self, out: &mut dyn BufMut) {
@@ -233,14 +248,12 @@ impl TxDeposit {
         self.encode_fields(out);
     }
 
-
     /// Calculate the transaction hash.
     pub fn tx_hash(&self) -> TxHash {
         let mut buf = Vec::with_capacity(self.eip2718_encoded_length());
         self.encode_2718(&mut buf);
         keccak256(&buf)
     }
-
 
     /// Output the length of the RLP signed transaction encoding.
     ///
@@ -261,14 +274,11 @@ impl TxDeposit {
         }
     }
 
-
     /// Returns the signature for the optimism deposit transactions, which don't include a
     /// signature.
     pub fn signature() -> Signature {
         Signature::new(U256::ZERO, U256::ZERO, false)
     }
-
-
 }
 
 impl Transaction for TxDeposit {
@@ -384,7 +394,7 @@ impl Encodable2718 for TxDeposit {
 impl Decodable2718 for TxDeposit {
     fn typed_decode(ty: u8, data: &mut &[u8]) -> Eip2718Result<Self> {
         let ty: OpTxType = ty.try_into().map_err(|_| Eip2718Error::UnexpectedType(ty))?;
-        if ty != OpTxType::Deposit as u8 {
+        if ty != OpTxType::Deposit {
             return Err(Eip2718Error::UnexpectedType(ty as u8));
         }
         let tx = Self::decode(data)?;
