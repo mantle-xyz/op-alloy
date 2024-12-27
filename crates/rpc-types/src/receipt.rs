@@ -1,8 +1,7 @@
 //! Receipt types for RPC
 
-use alloy_consensus::{Receipt, ReceiptWithBloom};
 use alloy_serde::OtherFields;
-use op_alloy_consensus::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope};
+use op_alloy_consensus::OpReceiptEnvelope;
 use serde::{Deserialize, Serialize};
 
 /// OP Transaction Receipt type
@@ -94,12 +93,11 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Regolith hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_nonce: Option<u64>,
-    /* ---------------------------------------- Canyon ---------------------------------------- */
-    /// Deposit receipt version for deposit transactions.
-    ///
-    /// Always null prior to the Canyon hardfork.
+
+    /* --------------------------------------- Regolith --------------------------------------- */
+    /// token ratio between eth and mnt
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub deposit_receipt_version: Option<u64>,
+    pub token_ration: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string
@@ -184,55 +182,6 @@ pub struct L1BlockInfo {
 }
 
 impl Eq for L1BlockInfo {}
-
-impl From<OpTransactionReceipt> for OpReceiptEnvelope<alloy_primitives::Log> {
-    fn from(value: OpTransactionReceipt) -> Self {
-        let inner_envelope = value.inner.inner;
-
-        /// Helper function to convert the inner logs within a [ReceiptWithBloom] from RPC to
-        /// consensus types.
-        #[inline(always)]
-        fn convert_standard_receipt(
-            receipt: ReceiptWithBloom<alloy_rpc_types_eth::Log>,
-        ) -> ReceiptWithBloom<alloy_primitives::Log> {
-            let ReceiptWithBloom { logs_bloom, receipt } = receipt;
-
-            let consensus_logs = receipt.logs.into_iter().map(|log| log.inner).collect();
-            ReceiptWithBloom {
-                receipt: Receipt {
-                    status: receipt.status,
-                    cumulative_gas_used: receipt.cumulative_gas_used,
-                    logs: consensus_logs,
-                },
-                logs_bloom,
-            }
-        }
-
-        match inner_envelope {
-            OpReceiptEnvelope::Legacy(receipt) => Self::Legacy(convert_standard_receipt(receipt)),
-            OpReceiptEnvelope::Eip2930(receipt) => Self::Eip2930(convert_standard_receipt(receipt)),
-            OpReceiptEnvelope::Eip1559(receipt) => Self::Eip1559(convert_standard_receipt(receipt)),
-            OpReceiptEnvelope::Eip7702(receipt) => Self::Eip7702(convert_standard_receipt(receipt)),
-            OpReceiptEnvelope::Deposit(OpDepositReceiptWithBloom { logs_bloom, receipt }) => {
-                let consensus_logs = receipt.inner.logs.into_iter().map(|log| log.inner).collect();
-                let consensus_receipt = OpDepositReceiptWithBloom {
-                    receipt: OpDepositReceipt {
-                        inner: Receipt {
-                            status: receipt.inner.status,
-                            cumulative_gas_used: receipt.inner.cumulative_gas_used,
-                            logs: consensus_logs,
-                        },
-                        deposit_nonce: receipt.deposit_nonce,
-                        deposit_receipt_version: receipt.deposit_receipt_version,
-                    },
-                    logs_bloom,
-                };
-                Self::Deposit(consensus_receipt)
-            }
-            _ => unreachable!("Unsupported OpReceiptEnvelope variant"),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -33,7 +33,6 @@ pub struct RollupConfig {
 
     #[serde(rename = "channel_timeout")]
     pub channel_timeout_bedrock: u64,
-    pub channel_timeout_granite: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub l1_chain_id: Option<u128>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -41,28 +40,11 @@ pub struct RollupConfig {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub regolith_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub canyon_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub delta_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ecotone_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fjord_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub granite_time: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interop_time: Option<u64>,
     pub batch_inbox_address: Address,
     pub deposit_contract_address: Address,
     pub l1_system_config_address: Address,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub protocol_versions_address: Option<Address>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub da_challenge_address: Option<Address>,
-    pub da_challenge_window: u64,
-    pub da_resolve_window: u64,
-    pub use_plasma: bool,
+    pub mantle_da_switch: bool,
+    pub datalayr_service_manager_addr: Address,
 }
 
 #[cfg(test)]
@@ -71,7 +53,38 @@ mod tests {
 
     #[test]
     fn test_rollup_config() {
-        let s = r#"{"genesis":{"l1":{"hash":"0x438335a20d98863a4c0c97999eb2481921ccd28553eac6f913af7c12aec04108", "number": 424242 },"l2":{"hash":"0xdbf6a80fef073de06add9b0d14026d6e5a86c85f6d102c36d3d8e9cf89c2afd3", "number": 1337 },"l2_time":1686068903,"system_config":{"batcherAddr":"0x6887246668a3b87f54deb3b94ba47a6f63f32985","overhead":"0x00000000000000000000000000000000000000000000000000000000000000bc","scalar":"0x00000000000000000000000000000000000000000000000000000000000a6fe0","gasLimit":30000000}},"block_time":2,"max_sequencer_drift":600,"seq_window_size":3600,"channel_timeout":300,"channel_timeout_granite":50,"l1_chain_id":1,"l2_chain_id":10,"regolith_time":0,"canyon_time":1704992401,"delta_time":1708560000,"ecotone_time":1710374401,"batch_inbox_address":"0xff00000000000000000000000000000000000010","deposit_contract_address":"0xbeb5fc579115071764c7423a4f12edde41f106ed","l1_system_config_address":"0x229047fed2591dbec1ef1118d64f7af3db9eb290","protocol_versions_address":"0x8062abc286f5e7d9428a0ccb9abd71e50d93b935","da_challenge_address":"0x0000000000000000000000000000000000000000","da_challenge_window":0,"da_resolve_window":0,"use_plasma":false}"#;
+        let s = r#"{
+      "genesis": {
+        "l1": {
+          "hash": "0x041dea101b3d09fee3dc566c9de820eca07d9d0e951853257c64c79fe4b90f25",
+          "number": 4858225
+        },
+        "l2": {
+          "hash": "0x227de3c9c89eb8b8f88a26a06abe125c0d9c7a95a8213f7c83d098e7391bbde6",
+          "number": 325709
+        },
+        "l2_time": 1702194288,
+        "system_config": {
+          "batcherAddr": "0x5fb5139834df283b6a4bd7267952f3ea21a573f4",
+          "overhead": "0x0000000000000000000000000000000000000000000000000000000000000834",
+          "scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+          "baseFee": 1000000000,
+          "gasLimit": 1125899906842624
+        }
+      },
+      "block_time": 2,
+      "max_sequencer_drift": 600,
+      "seq_window_size": 3600,
+      "channel_timeout": 300,
+      "l1_chain_id": 11155111,
+      "l2_chain_id": 5003,
+      "regolith_time": 0,
+      "batch_inbox_address": "0xff00000000000000000000000000000000000000",
+      "deposit_contract_address": "0xb3db4bd5bc225930ed674494f9a4f6a11b8efbc8",
+      "l1_system_config_address": "0x04b34526c91424e955d13c7226bc4385e57e6706",
+      "mantle_da_switch": true,
+      "datalayr_service_manager_addr": "0xd7f17171896461A6EB74f95DF3f9b0D966A8a907"
+    }"#;
 
         let deserialize = serde_json::from_str::<RollupConfig>(s).unwrap();
 

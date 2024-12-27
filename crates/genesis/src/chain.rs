@@ -1,9 +1,6 @@
 //! Chain Config Types
 
-use crate::{
-    base_fee_params, AddressList, ChainGenesis, OpBaseFeeParams, RollupConfig,
-    GRANITE_CHANNEL_TIMEOUT,
-};
+use crate::{AddressList, ChainGenesis, OpBaseFeeParams, RollupConfig};
 use alloc::string::String;
 use alloy_primitives::Address;
 
@@ -181,24 +178,16 @@ impl ChainConfig {
     }
 
     /// Loads the rollup config for the OP-Stack chain given the chain config and address list.
-    pub fn load_op_stack_rollup_config(&self) -> RollupConfig {
-        let config = base_fee_params(self.chain_id);
+    pub fn load_mantle_rollup_config(&self) -> RollupConfig {
         RollupConfig {
             genesis: self.genesis,
             l1_chain_id: self.l1_chain_id,
             l2_chain_id: self.chain_id,
-            base_fee_params: config.as_base_fee_params(),
             block_time: self.block_time,
             seq_window_size: self.seq_window_size,
             max_sequencer_drift: self.max_sequencer_drift,
-            canyon_base_fee_params: config.as_canyon_base_fee_params(),
             regolith_time: Some(0),
-            canyon_time: self.hardfork_configuration.canyon_time,
-            delta_time: self.hardfork_configuration.delta_time,
-            ecotone_time: self.hardfork_configuration.ecotone_time,
-            fjord_time: self.hardfork_configuration.fjord_time,
-            granite_time: self.hardfork_configuration.granite_time,
-            holocene_time: self.hardfork_configuration.holocene_time,
+            base_fee_time: None,
             batch_inbox_address: self.batch_inbox_addr,
             deposit_contract_address: self
                 .addresses
@@ -210,25 +199,20 @@ impl ChainConfig {
                 .as_ref()
                 .map(|a| a.system_config_proxy)
                 .unwrap_or_default(),
-            protocol_versions_address: self
-                .addresses
-                .as_ref()
-                .map(|a| a.address_manager)
-                .unwrap_or_default(),
-            superchain_config_address: None,
-            blobs_enabled_l1_timestamp: None,
-            da_challenge_address: self
-                .alt_da
-                .as_ref()
-                .and_then(|alt_da| alt_da.da_challenge_address),
 
             // The below chain parameters can be different per OP-Stack chain,
             // but since none of the superchain chains differ, it's not represented in the
             // superchain-registry yet. This restriction on superchain-chains may change in the
             // future. Test/Alt configurations can still load custom rollup-configs when
             // necessary.
+            mantle_da_switch: false,
             channel_timeout: 300,
-            granite_channel_timeout: GRANITE_CHANNEL_TIMEOUT,
+            datalayr_service_manager_addr: self
+                .addresses
+                .as_ref()
+                .map(|a| a.datalayr_service_manager_addr)
+                .unwrap_or_default(),
+            shanghai_time: Some(0),
         }
     }
 }

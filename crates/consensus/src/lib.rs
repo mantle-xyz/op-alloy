@@ -19,10 +19,6 @@ pub use transaction::{
     DEPOSIT_TX_TYPE_ID,
 };
 
-pub mod eip1559;
-pub mod hardforks;
-pub use hardforks::Hardforks;
-
 mod block;
 pub use block::OpBlock;
 

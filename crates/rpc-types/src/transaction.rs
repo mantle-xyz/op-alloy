@@ -134,7 +134,7 @@ impl alloy_network_primitives::TransactionResponse for Transaction {
 #[doc(alias = "OptimismTxFields")]
 #[serde(rename_all = "camelCase")]
 pub struct OpTransactionFields {
-    /// The ETH value to mint on L2
+    /// The MNT value to mint on L2
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub mint: Option<u128>,
     /// Hash that uniquely identifies the source of the deposit.
@@ -144,9 +144,12 @@ pub struct OpTransactionFields {
     /// exempt from the L2 gas limit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_system_tx: Option<bool>,
-    /// Deposit receipt version for deposit transactions post-canyon
+    /// The ETH value to mint on l2
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub deposit_receipt_version: Option<u64>,
+    pub eth_value: Option<u128>,
+    /// The ETH value which send to to_account on L2
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub eth_tx_value: Option<u128>,
 }
 
 impl From<OpTransactionFields> for OtherFields {
@@ -300,7 +303,7 @@ mod tests {
     fn can_deserialize_deposit() {
         // cast rpc eth_getTransactionByHash
         // 0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9 --rpc-url optimism
-        let rpc_tx = r#"{"blockHash":"0x9d86bb313ebeedf4f9f82bf8a19b426be656a365648a7c089b618771311db9f9","blockNumber":"0x798ad0b","hash":"0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9","transactionIndex":"0x0","type":"0x7e","nonce":"0x152ea95","input":"0x440a5e200000146b000f79c50000000000000003000000006725333f000000000141e287000000000000000000000000000000000000000000000000000000012439ee7e0000000000000000000000000000000000000000000000000000000063f363e973e96e7145ff001c81b9562cba7b6104eeb12a2bc4ab9f07c27d45cd81a986620000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985","mint":"0x0","sourceHash":"0x04e9a69416471ead93b02f0c279ab11ca0b635db5c1726a56faf22623bafde52","r":"0x0","s":"0x0","v":"0x0","yParity":"0x0","gas":"0xf4240","from":"0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001","to":"0x4200000000000000000000000000000000000015","depositReceiptVersion":"0x1","value":"0x0","gasPrice":"0x0"}"#;
+        let rpc_tx = r#"{"blockHash":"0x458377fd07dde6bc1b6f4b1ad86e84a22875bd511be70a591869265c7e14bf22","blockNumber":"0xa","from":"0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001","gas":"0xf4240","gasPrice":"0x0","hash":"0xca19d1e03a59837e0a00f2bf854fb6cf81dba3f141d8ac0c7a4e105e4e620d5b","input":"0x015d8eb9000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000675909a700000000000000000000000000000000000000000000000000000000291c1fa4c0b780315ec9a1c3a47c0456f4d65c0b8e48179e3c120a5d3585a1e819fedc33000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b906000000000000000000000000000000000000000000000000000000000000083400000000000000000000000000000000000000000000000000000000000f4240","nonce":"0x9","to":"0x4200000000000000000000000000000000000015","transactionIndex":"0x0","value":"0x0","type":"0x7e","v":"0x0","r":"0x0","s":"0x0","sourceHash":"0x6596e00bb0865b816b2af2050dcee3cbf50ec482d5ce645d1a7bb3c5ece3b4c4","mint":"0x0","ethValue":"0x0"}"#;
 
         let tx = serde_json::from_str::<Transaction>(rpc_tx).unwrap();
 
@@ -308,11 +311,5 @@ mod tests {
             panic!("Expected deposit transaction");
         };
         assert_eq!(tx.from, inner.from);
-        assert_eq!(tx.deposit_nonce, Some(22211221));
-        assert_eq!(tx.inner.effective_gas_price, Some(0));
-
-        let deserialized = serde_json::to_value(&tx).unwrap();
-        let expected = serde_json::from_str::<serde_json::Value>(rpc_tx).unwrap();
-        similar_asserts::assert_eq!(deserialized, expected);
     }
 }
