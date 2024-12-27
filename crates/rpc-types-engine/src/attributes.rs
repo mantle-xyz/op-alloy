@@ -1,16 +1,12 @@
 //! Optimism-specific payload attributes.
 
 use alloc::vec::Vec;
-use alloy_eips::eip1559::BaseFeeParams;
-use alloy_primitives::{Bytes, B64};
+use alloy_primitives::Bytes;
 use alloy_rpc_types_engine::PayloadAttributes;
-use op_alloy_consensus::eip1559::{
-    decode_eip_1559_params, decode_holocene_extra_data, EIP1559ParamError,
-};
 use op_alloy_protocol::L2BlockInfo;
 
 /// Optimism Payload Attributes
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct OpPayloadAttributes {
@@ -34,27 +30,7 @@ pub struct OpPayloadAttributes {
     ///
     /// Prior to Holocene activation, this field should always be [None].
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub eip_1559_params: Option<B64>,
-}
-
-impl OpPayloadAttributes {
-    /// Extracts the `eip1559` parameters for the payload.
-    pub fn get_holocene_extra_data(
-        &self,
-        default_base_fee_params: BaseFeeParams,
-    ) -> Result<Bytes, EIP1559ParamError> {
-        self.eip_1559_params
-            .map(|params| decode_holocene_extra_data(params, default_base_fee_params))
-            .ok_or(EIP1559ParamError::NoEIP1559Params)?
-    }
-
-    /// Extracts the Holocene 1599 parameters from the encoded form:
-    /// <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/holocene/exec-engine.md#eip1559params-encoding>
-    ///
-    /// Returns (`elasticity`, `denominator`)
-    pub fn decode_eip_1559_params(&self) -> Option<(u32, u32)> {
-        self.eip_1559_params.map(decode_eip_1559_params)
-    }
+    pub base_fee: Option<u128>,
 }
 
 /// Optimism Payload Attributes with parent block reference.
@@ -65,18 +41,12 @@ pub struct OpAttributesWithParent {
     pub attributes: OpPayloadAttributes,
     /// The parent block reference.
     pub parent: L2BlockInfo,
-    /// Whether the current batch is the last in its span.
-    pub is_last_in_span: bool,
 }
 
 impl OpAttributesWithParent {
     /// Create a new [OpAttributesWithParent] instance.
-    pub const fn new(
-        attributes: OpPayloadAttributes,
-        parent: L2BlockInfo,
-        is_last_in_span: bool,
-    ) -> Self {
-        Self { attributes, parent, is_last_in_span }
+    pub const fn new(attributes: OpPayloadAttributes, parent: L2BlockInfo) -> Self {
+        Self { attributes, parent }
     }
 
     /// Returns the payload attributes.
@@ -88,11 +58,6 @@ impl OpAttributesWithParent {
     pub const fn parent(&self) -> &L2BlockInfo {
         &self.parent
     }
-
-    /// Returns whether the current batch is the last in its span.
-    pub const fn is_last_in_span(&self) -> bool {
-        self.is_last_in_span
-    }
 }
 
 #[cfg(all(test, feature = "serde"))]
@@ -100,7 +65,6 @@ mod test {
     use super::*;
     use alloy_primitives::{b64, Address, B256};
     use alloy_rpc_types_engine::PayloadAttributes;
-    use core::str::FromStr;
 
     #[test]
     fn test_serde_roundtrip_attributes_pre_holocene() {
@@ -115,52 +79,12 @@ mod test {
             transactions: Some(vec![b"hello".to_vec().into()]),
             no_tx_pool: Some(true),
             gas_limit: Some(42),
-            eip_1559_params: None,
+            base_fee: Some(100_000),
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();
         let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
 
         assert_eq!(attributes, de);
-    }
-
-    #[test]
-    fn test_serde_roundtrip_attributes_post_holocene() {
-        let attributes = OpPayloadAttributes {
-            payload_attributes: PayloadAttributes {
-                timestamp: 0x1337,
-                prev_randao: B256::ZERO,
-                suggested_fee_recipient: Address::ZERO,
-                withdrawals: Default::default(),
-                parent_beacon_block_root: Some(B256::ZERO),
-            },
-            transactions: Some(vec![b"hello".to_vec().into()]),
-            no_tx_pool: Some(true),
-            gas_limit: Some(42),
-            eip_1559_params: Some(b64!("0000dead0000beef")),
-        };
-
-        let ser = serde_json::to_string(&attributes).unwrap();
-        let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
-
-        assert_eq!(attributes, de);
-    }
-
-    #[test]
-    fn test_get_extra_data_post_holocene() {
-        let attributes = OpPayloadAttributes {
-            eip_1559_params: Some(B64::from_str("0x0000000800000008").unwrap()),
-            ..Default::default()
-        };
-        let extra_data = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
-        assert_eq!(extra_data.unwrap(), Bytes::copy_from_slice(&[0, 0, 0, 0, 8, 0, 0, 0, 8]));
-    }
-
-    #[test]
-    fn test_get_extra_data_post_holocene_default() {
-        let attributes =
-            OpPayloadAttributes { eip_1559_params: Some(B64::ZERO), ..Default::default() };
-        let extra_data = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
-        assert_eq!(extra_data.unwrap(), Bytes::copy_from_slice(&[0, 0, 0, 0, 80, 0, 0, 0, 60]));
     }
 }
