@@ -20,7 +20,7 @@ pub struct L2BlockRef {
     pub timestamp: u64,
     /// The L1 origin.
     #[serde(rename = "l1origin")]
-    pub l1_origin: BlockNumHash,
+    pub l1_origin: Origin,
     /// The sequence number.
     pub sequence_number: u64,
 }
@@ -62,6 +62,16 @@ pub struct SyncStatus {
     pub safe_l2: L2BlockRef,
     /// The finalized L2 block ref.
     pub finalized_l2: L2BlockRef,
-    /// The pending safe L2 block ref.
-    pub pending_safe_l2: L2BlockRef,
+    /// The queued unsafe L2 block ref.
+    pub queued_unsafe_l2: L2BlockRef,
+    /// The target L2 block need to sync.
+    pub engine_sync_target: L2BlockRef,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
+pub struct Origin {
+    /// The block hash.
+    pub hash: B256,
+    /// The block number.
+    pub number: BlockNumber,
 }

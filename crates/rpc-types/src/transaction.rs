@@ -1,8 +1,9 @@
 //! Optimism specific types related to transactions.
-
-use alloy_consensus::Transaction as _;
+use alloy_consensus::{Transaction as _, TxEnvelope};
 use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization};
-use alloy_primitives::{Address, BlockHash, Bytes, ChainId, TxKind, B256, U256};
+use alloy_primitives::{
+    private::derive_more, Address, BlockHash, Bytes, ChainId, TxKind, B256, U256,
+};
 use alloy_serde::OtherFields;
 use op_alloy_consensus::OpTxEnvelope;
 use serde::{Deserialize, Serialize};
@@ -21,10 +22,6 @@ pub struct Transaction {
     #[deref]
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<OpTxEnvelope>,
-
-    /// Nonce for deposit transactions. Only present in RPC responses.
-    pub deposit_nonce: Option<u64>,
-
     /// Deposit receipt version for deposit transactions post-canyon
     pub deposit_receipt_version: Option<u64>,
 }
@@ -187,13 +184,6 @@ mod tx_serde {
             with = "alloy_serde::quantity::opt"
         )]
         effective_gas_price: Option<u128>,
-        #[serde(
-            default,
-            rename = "nonce",
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )]
-        deposit_nonce: Option<u64>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -231,7 +221,6 @@ mod tx_serde {
                         from,
                     },
                 deposit_receipt_version,
-                deposit_nonce,
             } = value;
 
             // if inner transaction is a deposit, then don't serialize `from` directly
@@ -246,7 +235,7 @@ mod tx_serde {
                 block_number,
                 transaction_index,
                 deposit_receipt_version,
-                other: OptionalFields { from, effective_gas_price, deposit_nonce },
+                other: OptionalFields { from, effective_gas_price },
             }
         }
     }
@@ -274,9 +263,6 @@ mod tx_serde {
                 return Err(serde_json::Error::custom("missing `from` field"));
             };
 
-            // Only serialize deposit_nonce if inner transaction is deposit to avoid duplicated keys
-            let deposit_nonce = other.deposit_nonce.filter(|_| inner.is_deposit());
-
             let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
 
             Ok(Self {
@@ -289,7 +275,6 @@ mod tx_serde {
                     effective_gas_price,
                 },
                 deposit_receipt_version,
-                deposit_nonce,
             })
         }
     }

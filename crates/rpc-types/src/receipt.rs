@@ -97,7 +97,7 @@ pub struct OpTransactionReceiptFields {
     /* --------------------------------------- Regolith --------------------------------------- */
     /// token ratio between eth and mnt
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub token_ration: Option<u128>,
+    pub token_ratio: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string
