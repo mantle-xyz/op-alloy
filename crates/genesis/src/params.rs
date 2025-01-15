@@ -1,7 +1,5 @@
 //! Module containing fee parameters.
 
-use alloy_eips::eip1559::BaseFeeParams;
-
 /// Base fee max change denominator for Optimism Mainnet as defined in the Optimism
 /// [transaction costs](https://community.optimism.io/docs/developers/build/differences/#transaction-costs) doc.
 pub const OP_MAINNET_EIP1559_DEFAULT_BASE_FEE_MAX_CHANGE_DENOMINATOR: u128 = 50;
@@ -85,22 +83,4 @@ pub struct OpBaseFeeParams {
         serde(rename = "eip1559DenominatorCanyon", alias = "eip1559_denominator_canyon")
     )]
     pub eip1559_denominator_canyon: u128,
-}
-
-impl OpBaseFeeParams {
-    /// Returns the inner [BaseFeeParams].
-    pub const fn as_base_fee_params(&self) -> BaseFeeParams {
-        BaseFeeParams {
-            max_change_denominator: self.eip1559_denominator,
-            elasticity_multiplier: self.eip1559_elasticity,
-        }
-    }
-
-    /// Returns the [BaseFeeParams] for the canyon hardfork.
-    pub const fn as_canyon_base_fee_params(&self) -> BaseFeeParams {
-        BaseFeeParams {
-            max_change_denominator: self.eip1559_denominator_canyon,
-            elasticity_multiplier: self.eip1559_elasticity,
-        }
-    }
 }

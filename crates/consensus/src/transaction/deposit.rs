@@ -27,10 +27,10 @@ pub struct TxDeposit {
     /// transaction is a contract creation.
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "TxKind::is_create"))]
     pub to: TxKind,
-    /// The ETH value to mint on L2.
+    /// The Mnt value to mint on L2.
     #[cfg_attr(feature = "serde", serde(default, with = "alloy_serde::quantity::opt"))]
     pub mint: Option<u128>,
-    ///  The ETH value to send to the recipient account.
+    ///  The Mnt value to send to the recipient account.
     pub value: U256,
     /// The gas limit for the L2 transaction.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "gas"))]
@@ -46,9 +46,22 @@ pub struct TxDeposit {
         )
     )]
     pub is_system_transaction: bool,
+    ///EthValue means L2 BVM_ETH mint tag, nil means that there is no need to mint BVM_ETH.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethValue")
+    )]
+    pub eth_value: Option<u128>,
     /// Input has two uses depending if transaction is Create or Call (if `to` field is None or
     /// Some).
     pub input: Bytes,
+    /// EthTxValue means L2 BVM_ETH tx tag, nil means that there is no need to transfer BVM_ETH to
+    /// msg.To.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue")
+    )]
+    pub eth_tx_value: Option<u128>,
 }
 
 impl DepositTransaction for TxDeposit {
@@ -82,23 +95,41 @@ impl TxDeposit {
     /// - `value`
     /// - `gas_limit`
     /// - `is_system_transaction`
+    /// - `eth_value`
     /// - `input`
+    /// - `eth_tx_value`
     pub fn rlp_decode_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Ok(Self {
             source_hash: Decodable::decode(buf)?,
             from: Decodable::decode(buf)?,
             to: Decodable::decode(buf)?,
-            mint: if *buf.first().ok_or(DecodeError::InputTooShort)? == EMPTY_STRING_CODE {
-                buf.advance(1);
-                None
-            } else {
-                Some(Decodable::decode(buf)?)
-            },
+            mint: Self::decode_u128_from_rlp(buf)?,
             value: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             is_system_transaction: Decodable::decode(buf)?,
+            eth_value: Self::decode_u128_from_rlp(buf)?,
             input: Decodable::decode(buf)?,
+            eth_tx_value: Self::decode_optional_u128_from_rlp(buf)?,
         })
+    }
+
+    /// Decodes a u128 value from RLP format. If the value doesn't exist, returns nil.
+    pub fn decode_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
+        if *buf.first().ok_or(DecodeError::InputTooShort)? == EMPTY_STRING_CODE {
+            buf.advance(1);
+            Ok(None)
+        } else {
+            Ok(Some(Decodable::decode(buf)?))
+        }
+    }
+
+    /// Decodes a u128 value from RLP format. If the value doesn't exist, the field will be omitted
+    /// from encoding.
+    pub fn decode_optional_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
+        if buf.is_empty() {
+            return Ok(None);
+        }
+        Self::decode_u128_from_rlp(buf)
     }
 
     /// Decodes the transaction from RLP bytes.
@@ -133,6 +164,8 @@ impl TxDeposit {
             + self.gas_limit.length()
             + self.is_system_transaction.length()
             + self.input.0.length()
+            + self.eth_value.map_or(1, |eth| eth.length())
+            + self.eth_tx_value.map_or(0, |eth| eth.length())
     }
 
     /// Encodes only the transaction's fields into the desired buffer, without a RLP header.
@@ -149,7 +182,15 @@ impl TxDeposit {
         self.value.encode(out);
         self.gas_limit.encode(out);
         self.is_system_transaction.encode(out);
+        if let Some(eth_value) = self.eth_value {
+            eth_value.encode(out);
+        } else {
+            out.put_u8(EMPTY_STRING_CODE);
+        }
         self.input.encode(out);
+        if let Some(eth_tx_value) = self.eth_tx_value {
+            eth_tx_value.encode(out);
+        }
     }
 
     /// Calculates a heuristic for the in-memory size of the [TxDeposit] transaction.
@@ -162,7 +203,9 @@ impl TxDeposit {
         mem::size_of::<U256>() + // value
         mem::size_of::<u128>() + // gas_limit
         mem::size_of::<bool>() + // is_system_transaction
-        self.input.len() // input
+        self.input.len() + // input
+        mem::size_of::<Option<u128>>() + //eth_value
+        mem::size_of::<Option<u128>>() // eth_tx_value
     }
 
     /// Get the transaction type
@@ -363,6 +406,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: Some(100),
+            eth_tx_value: Some(100),
         };
 
         assert_eq!(tx.source_hash(), Some(B256::with_last_byte(42)));
@@ -382,6 +427,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: false,
             input: Bytes::default(),
+            eth_value: None,
+            eth_tx_value: None,
         };
 
         assert_eq!(tx.source_hash(), Some(B256::default()));
@@ -402,6 +449,8 @@ mod tests {
             gas_limit: 100000,
             is_system_transaction: false,
             input: Bytes::from_static(&[1, 2, 3]),
+            eth_value: Some(100),
+            eth_tx_value: Some(100),
         };
 
         assert_eq!(tx.source_hash(), Some(B256::default()));
@@ -430,7 +479,9 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
+            eth_value: Some(100),
             input: Bytes::default(),
+            eth_tx_value: Some(100),
         };
 
         let mut buffer = BytesMut::new();
@@ -450,7 +501,9 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
+            eth_value: Some(100),
             input: Bytes::default(),
+            eth_tx_value: Some(100),
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -472,7 +525,9 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
+            eth_value: Some(100),
             input: Bytes::default(),
+            eth_tx_value: Some(100),
         };
 
         assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
@@ -488,7 +543,9 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
+            eth_value: Some(100),
             input: Bytes::default(),
+            eth_tx_value: Some(100),
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -510,7 +567,9 @@ mod tests {
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
+            eth_value: Some(100),
             input: Bytes::default(),
+            eth_tx_value: Some(100),
         };
 
         let total_len = tx_deposit.network_encoded_length();
@@ -555,6 +614,9 @@ pub(super) mod serde_bincode_compat {
         gas_limit: u64,
         is_system_transaction: bool,
         input: Cow<'a, Bytes>,
+        #[serde(default)]
+        eth_value: Option<u128>,
+        eth_tx_value: Option<u128>,
     }
 
     impl<'a> From<&'a super::TxDeposit> for TxDeposit<'a> {
@@ -567,7 +629,9 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 gas_limit: value.gas_limit,
                 is_system_transaction: value.is_system_transaction,
+                eth_value: value.eth_value,
                 input: Cow::Borrowed(&value.input),
+                eth_tx_value: value.eth_tx_value,
             }
         }
     }
@@ -582,7 +646,9 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 gas_limit: value.gas_limit,
                 is_system_transaction: value.is_system_transaction,
+                eth_value: value.eth_value,
                 input: value.input.into_owned(),
+                eth_tx_value: value.eth_tx_value,
             }
         }
     }
