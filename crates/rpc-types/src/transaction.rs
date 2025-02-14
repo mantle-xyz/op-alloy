@@ -1,6 +1,6 @@
 //! Optimism specific types related to transactions.
 use alloy_consensus::{Transaction as _, TxEnvelope};
-use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization};
+use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization, Typed2718};
 use alloy_primitives::{
     private::derive_more, Address, BlockHash, Bytes, ChainId, TxKind, B256, U256,
 };
@@ -22,8 +22,15 @@ pub struct Transaction {
     #[deref]
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<OpTxEnvelope>,
+
     /// Deposit receipt version for deposit transactions post-canyon
     pub deposit_receipt_version: Option<u64>,
+}
+
+impl Typed2718 for Transaction {
+    fn ty(&self) -> u8 {
+        self.inner.ty()
+    }
 }
 
 impl alloy_consensus::Transaction for Transaction {
@@ -71,6 +78,10 @@ impl alloy_consensus::Transaction for Transaction {
         self.inner.kind()
     }
 
+    fn is_create(&self) -> bool {
+        self.inner.is_create()
+    }
+
     fn to(&self) -> Option<Address> {
         self.inner.to()
     }
@@ -81,10 +92,6 @@ impl alloy_consensus::Transaction for Transaction {
 
     fn input(&self) -> &Bytes {
         self.inner.input()
-    }
-
-    fn ty(&self) -> u8 {
-        self.inner.ty()
     }
 
     fn access_list(&self) -> Option<&AccessList> {
@@ -121,9 +128,6 @@ impl alloy_network_primitives::TransactionResponse for Transaction {
         self.inner.from()
     }
 
-    fn to(&self) -> Option<Address> {
-        alloy_consensus::Transaction::to(&self.inner)
-    }
 }
 
 /// Optimism specific transaction fields

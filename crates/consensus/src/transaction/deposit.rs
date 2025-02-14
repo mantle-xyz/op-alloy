@@ -12,6 +12,7 @@ use alloy_rlp::{
     Buf, BufMut, Decodable, Encodable, Error as DecodeError, Header, EMPTY_STRING_CODE,
 };
 use core::mem;
+use alloy_eips::Typed2718;
 
 /// Deposit transactions, also known as deposits are initiated on L1, and executed on L2.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -272,6 +273,12 @@ impl TxDeposit {
     }
 }
 
+impl Typed2718 for TxDeposit {
+    fn ty(&self) -> u8 {
+        OpTxType::Deposit as u8
+    }
+}
+
 impl Transaction for TxDeposit {
     fn chain_id(&self) -> Option<ChainId> {
         None
@@ -325,10 +332,6 @@ impl Transaction for TxDeposit {
         &self.input
     }
 
-    fn ty(&self) -> u8 {
-        OpTxType::Deposit as u8
-    }
-
     fn access_list(&self) -> Option<&AccessList> {
         None
     }
@@ -339,6 +342,10 @@ impl Transaction for TxDeposit {
 
     fn authorization_list(&self) -> Option<&[alloy_eips::eip7702::SignedAuthorization]> {
         None
+    }
+
+    fn is_create(&self) -> bool {
+        self.to.is_create()
     }
 }
 

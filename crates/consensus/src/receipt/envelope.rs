@@ -4,6 +4,7 @@ use crate::{OpDepositReceipt, OpDepositReceiptWithBloom, OpTxType};
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, TxReceipt};
 use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
+use alloy_eips::Typed2718;
 use alloy_primitives::{logs_bloom, Bloom, Log};
 use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
 
@@ -24,34 +25,34 @@ use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
 pub enum OpReceiptEnvelope<T = Log> {
     /// Receipt envelope with no type flag.
     #[cfg_attr(feature = "serde", serde(rename = "0x0", alias = "0x00"))]
-    Legacy(ReceiptWithBloom<T>),
+    Legacy(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 1, containing a [EIP-2930] receipt.
     ///
     /// [EIP-2930]: https://eips.ethereum.org/EIPS/eip-2930
     #[cfg_attr(feature = "serde", serde(rename = "0x1", alias = "0x01"))]
-    Eip2930(ReceiptWithBloom<T>),
+    Eip2930(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 2, containing a [EIP-1559] receipt.
     ///
     /// [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
     #[cfg_attr(feature = "serde", serde(rename = "0x2", alias = "0x02"))]
-    Eip1559(ReceiptWithBloom<T>),
+    Eip1559(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 4, containing a [EIP-7702] receipt.
     ///
     /// [EIP-7702]: https://eips.ethereum.org/EIPS/eip-7702
     #[cfg_attr(feature = "serde", serde(rename = "0x4", alias = "0x04"))]
-    Eip7702(ReceiptWithBloom<T>),
+    Eip7702(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 126, containing a [deposit] receipt.
     ///
     /// [deposit]: https://specs.optimism.io/protocol/deposits.html
     #[cfg_attr(feature = "serde", serde(rename = "0x7e", alias = "0x7E"))]
-    Deposit(OpDepositReceiptWithBloom<T>),
+    Deposit(ReceiptWithBloom<OpDepositReceipt<T>>),
 }
 
 impl OpReceiptEnvelope<Log> {
     /// Creates a new [`OpReceiptEnvelope`] from the given parts.
     pub fn from_parts<'a>(
         status: bool,
-        cumulative_gas_used: u128,
+        cumulative_gas_used: u64,
         logs: impl IntoIterator<Item = &'a Log>,
         tx_type: OpTxType,
         deposit_nonce: Option<u64>,
@@ -112,7 +113,7 @@ impl<T> OpReceiptEnvelope<T> {
     }
 
     /// Returns the cumulative gas used at this receipt.
-    pub fn cumulative_gas_used(&self) -> u128 {
+    pub fn cumulative_gas_used(&self) -> u64 {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
@@ -192,10 +193,12 @@ impl OpReceiptEnvelope {
     }
 }
 
-impl<T> TxReceipt<T> for OpReceiptEnvelope<T>
+impl<T> TxReceipt for OpReceiptEnvelope<T>
 where
     T: Clone + core::fmt::Debug + PartialEq + Eq + Send + Sync,
 {
+    type Log = T;
+
     fn status_or_post_state(&self) -> Eip658Value {
         self.as_receipt().unwrap().status
     }
@@ -214,7 +217,7 @@ where
     }
 
     /// Returns the cumulative gas used at this receipt.
-    fn cumulative_gas_used(&self) -> u128 {
+    fn cumulative_gas_used(&self) -> u64 {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
@@ -245,16 +248,20 @@ impl Decodable for OpReceiptEnvelope {
     }
 }
 
-impl Encodable2718 for OpReceiptEnvelope {
-    fn type_flag(&self) -> Option<u8> {
-        match self {
-            Self::Legacy(_) => None,
-            Self::Eip2930(_) => Some(OpTxType::Eip2930 as u8),
-            Self::Eip1559(_) => Some(OpTxType::Eip1559 as u8),
-            Self::Eip7702(_) => Some(OpTxType::Eip7702 as u8),
-            Self::Deposit(_) => Some(OpTxType::Deposit as u8),
-        }
+impl Typed2718 for OpReceiptEnvelope {
+    fn ty(&self) -> u8 {
+        let ty = match self {
+            Self::Legacy(_) => OpTxType::Legacy,
+            Self::Eip2930(_) => OpTxType::Eip2930,
+            Self::Eip1559(_) => OpTxType::Eip1559,
+            Self::Eip7702(_) => OpTxType::Eip7702,
+            Self::Deposit(_) => OpTxType::Deposit,
+        };
+        ty as u8
     }
+}
+
+impl Encodable2718 for OpReceiptEnvelope {
 
     fn encode_2718_len(&self) -> usize {
         self.inner_length() + !self.is_legacy() as usize
@@ -329,7 +336,7 @@ mod tests {
             OpReceiptEnvelope::Legacy(ReceiptWithBloom {
                 receipt: Receipt {
                     status: false.into(),
-                    cumulative_gas_used: 0x1u128,
+                    cumulative_gas_used: 0x1,
                     logs: vec![Log {
                         address: address!("0000000000000000000000000000000000000011"),
                         data: LogData::new_unchecked(

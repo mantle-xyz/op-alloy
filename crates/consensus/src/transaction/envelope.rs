@@ -1,12 +1,5 @@
-use alloy_consensus::{
-    transaction::RlpEcdsaTx, Sealable, Sealed, Signed, Transaction, TxEip1559, TxEip2930,
-    TxEip7702, TxLegacy,
-};
-use alloy_eips::{
-    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
-    eip2930::AccessList,
-    eip7702::SignedAuthorization,
-};
+use alloy_consensus::{transaction::RlpEcdsaTx, Sealable, Sealed, Signed, Transaction, TxEip1559, TxEip2930, TxEip7702, TxEnvelope, TxLegacy};
+use alloy_eips::{eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718}, eip2930::AccessList, eip7702::SignedAuthorization, Typed2718};
 use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 use derive_more::Display;
@@ -147,6 +140,35 @@ impl From<Sealed<TxDeposit>> for OpTxEnvelope {
     }
 }
 
+impl TryFrom<TxEnvelope> for OpTxEnvelope {
+    type Error = TxEnvelope;
+
+    fn try_from(value: TxEnvelope) -> Result<Self, Self::Error> {
+        Self::try_from_eth_envelope(value)
+    }
+}
+
+impl TryFrom<OpTxEnvelope> for TxEnvelope {
+    type Error = OpTxEnvelope;
+
+    fn try_from(value: OpTxEnvelope) -> Result<Self, Self::Error> {
+        value.try_into_eth_envelope()
+    }
+}
+
+impl Typed2718 for OpTxEnvelope {
+    fn ty(&self) -> u8 {
+        match self {
+            Self::Legacy(tx) => tx.tx().ty(),
+            Self::Eip2930(tx) => tx.tx().ty(),
+            Self::Eip1559(tx) => tx.tx().ty(),
+            Self::Eip7702(tx) => tx.tx().ty(),
+            Self::Deposit(tx) => tx.ty(),
+        }
+    }
+}
+
+
 impl Transaction for OpTxEnvelope {
     fn chain_id(&self) -> Option<u64> {
         match self {
@@ -268,16 +290,6 @@ impl Transaction for OpTxEnvelope {
         }
     }
 
-    fn ty(&self) -> u8 {
-        match self {
-            Self::Legacy(tx) => tx.tx().ty(),
-            Self::Eip2930(tx) => tx.tx().ty(),
-            Self::Eip1559(tx) => tx.tx().ty(),
-            Self::Eip7702(tx) => tx.tx().ty(),
-            Self::Deposit(tx) => tx.ty(),
-        }
-    }
-
     fn access_list(&self) -> Option<&AccessList> {
         match self {
             Self::Legacy(tx) => tx.tx().access_list(),
@@ -327,6 +339,16 @@ impl Transaction for OpTxEnvelope {
             Self::Deposit(tx) => tx.effective_gas_price(base_fee),
         }
     }
+
+    fn is_create(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.tx().is_create(),
+            Self::Eip2930(tx) => tx.tx().is_create(),
+            Self::Eip1559(tx) => tx.tx().is_create(),
+            Self::Eip7702(tx) => tx.tx().is_create(),
+            Self::Deposit(tx) => tx.is_create(),
+        }
+    }
 }
 
 impl OpTxEnvelope {
@@ -360,6 +382,32 @@ impl OpTxEnvelope {
         match self {
             Self::Deposit(tx) => tx.inner().is_system_transaction,
             _ => false,
+        }
+    }
+    /// Attempts to convert the optimism variant into an ethereum [`TxEnvelope`].
+    ///
+    /// Returns the envelope as error if it is a variant unsupported on ethereum: [`TxDeposit`]
+    pub fn try_into_eth_envelope(self) -> Result<TxEnvelope, Self> {
+        match self {
+            Self::Legacy(tx) => Ok(tx.into()),
+            Self::Eip2930(tx) => Ok(tx.into()),
+            Self::Eip1559(tx) => Ok(tx.into()),
+            Self::Eip7702(tx) => Ok(tx.into()),
+            tx @ Self::Deposit(_) => Err(tx),
+        }
+    }
+
+    /// Attempts to convert an ethereum [`TxEnvelope`] into the optimism variant.
+    ///
+    /// Returns the given envelope as error if [`OpTxEnvelope`] doesn't support the variant
+    /// (EIP-4844)
+    pub fn try_from_eth_envelope(tx: TxEnvelope) -> Result<Self, TxEnvelope> {
+        match tx {
+            TxEnvelope::Legacy(tx) => Ok(tx.into()),
+            TxEnvelope::Eip2930(tx) => Ok(tx.into()),
+            TxEnvelope::Eip1559(tx) => Ok(tx.into()),
+            tx @ TxEnvelope::Eip4844(_) => Err(tx),
+            TxEnvelope::Eip7702(tx) => Ok(tx.into()),
         }
     }
 
