@@ -224,7 +224,7 @@ pub const MANTLE_SEPOLIA_CONFIG: RollupConfig = RollupConfig {
     l2_chain_id: 5003,
     regolith_time: Some(0),
     base_fee_time: None,
-    batch_inbox_address: address!("ff00000000000000000000000000000000000000"),
+    batch_inbox_address: address!("ffeeddccbbaa0000000000000000000000000000"),
     deposit_contract_address: address!("b3db4bd5bc225930ed674494f9a4f6a11b8efbc8"),
     l1_system_config_address: address!("04b34526c91424e955d13c7226bc4385e57e6706"),
     mantle_da_switch: true,
