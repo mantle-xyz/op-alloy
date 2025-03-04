@@ -1,0 +1,636 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ferra" dir="ltr">
+
+<head>
+    <!-- Book generated using mdBook -->
+    <meta charset="UTF-8">
+    <title>The op-alloy Book</title>
+    <meta name="robots" content="noindex">
+
+
+    <!-- Custom HTML head -->
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="icon" href="favicon.svg">
+    <link rel="shortcut icon" href="favicon.png">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/general.css">
+    <link rel="stylesheet" href="css/chrome.css">
+    <link rel="stylesheet" href="css/print.css" media="print">
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="fonts/fonts.css">
+
+    <!-- Highlight.js Stylesheets -->
+    <link rel="stylesheet" href="highlight.css">
+    <link rel="stylesheet" href="tomorrow-night.css">
+    <link rel="stylesheet" href="ayu-highlight.css">
+
+    <!-- Custom theme stylesheets -->
+    <link rel="stylesheet" href="custom.css">
+
+</head>
+
+<body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('ferra')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch (e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="starting/installation.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="building/index.html"><strong aria-hidden="true">3.</strong> Building</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="building/genesis/index.html"><strong aria-hidden="true">3.1.</strong> Genesis</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="building/genesis/rollup-config.html"><strong aria-hidden="true">3.1.1.</strong> Rollup Config</a></li><li class="chapter-item expanded "><a href="building/genesis/system-config.html"><strong aria-hidden="true">3.1.2.</strong> System Config</a></li></ol></li><li class="chapter-item expanded "><a href="building/consensus.html"><strong aria-hidden="true">3.2.</strong> Consensus</a></li><li class="chapter-item expanded "><a href="building/engine.html"><strong aria-hidden="true">3.3.</strong> Engine RPC Types</a></li><li class="chapter-item expanded "><a href="building/protocol/index.html"><strong aria-hidden="true">3.4.</strong> Protocol</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="building/protocol/block-info.html"><strong aria-hidden="true">3.4.1.</strong> BlockInfo and L2BlockInfo Types</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="examples/index.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="examples/load-a-rollup-config.html"><strong aria-hidden="true">4.1.</strong> Load a Rollup Config</a></li></ol></li><li class="chapter-item expanded "><a href="CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="LICENSE.html"><strong aria-hidden="true">6.</strong> Licensing</a></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">7.</strong> Glossary</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function (e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
+                            title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                            aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme"
+                            aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ferra">Ferra</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)"
+                            aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S"
+                            aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The op-alloy Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/alloy-rs/op-alloy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..."
+                            aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function (link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="op-alloy-book"><a class="header" href="#op-alloy-book">op-alloy Book</a></h1>
+<p><a href="https://github.com/alloy-rs/op-alloy"><img src="https://img.shields.io/github/stars/alloy-rs/op-alloy"></a></p>
+<p>Welcome to the hands-on guide for getting started with op-alloy!</p>
+<p>op-alloy connects applications to the OP Stack, leveraging high
+performance types, traits, and middleware from <a href="https://github.com/alloy-rs/alloy">alloy</a>.</p>
+<blockquote>
+<p>📖 Development Status</p>
+<p><code>op-alloy</code> is in active development, and is not yet ready for use in production.
+During development, this book will evolve quickly and may contain inaccuracies.</p>
+<p>Please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for
+improvements, and also feel free to <a href="https://alloy-rs.github.io/op-alloy">contribute</a> to the project!</p>
+</blockquote>
+<h2 id="sections"><a class="header" href="#sections">Sections</a></h2>
+<h3 id="getting-started"><a class="header" href="#getting-started"><a href="./starting/installation.html">Getting Started</a></a></h3>
+<p>To get started with op-alloy, add op-alloy crates as a dependency and take your first steps.</p>
+<h3 id="building-with-op-alloy"><a class="header" href="#building-with-op-alloy"><a href="./building/README.html">Building with op-alloy</a></a></h3>
+<p>A walkthrough of building with op-alloy.</p>
+<h3 id="examples"><a class="header" href="#examples"><a href="./examples/README.html">Examples</a></a></h3>
+<p>This section will give you practical examples of how Alloy can be used in your codebase.</p>
+<h3 id="contributing"><a class="header" href="#contributing"><a href="./CONTRIBUTING.html">Contributing</a></a></h3>
+<p>Contributors are welcome! It is built and maintained by Alloy contributors,
+members of <a href="https://github.com/ethereum-optimism">OP Labs</a>, and the broader open source community.</p>
+<p>Please see the <a href="https://alloy-rs.github.io/op-alloy">contributing guide</a> to get involved.</p>
+<h3 id="licensing"><a class="header" href="#licensing"><a href="./LICENSE.html">Licensing</a></a></h3>
+<p>op-alloy is licensed under the combined Apache 2.0 and MIT License, along
+with a SNAPPY license for snappy encoding use.</p>
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<p><a href="https://github.com/alloy-rs/op-alloy">op-alloy</a> consists of a number of crates that provide a range of functionality
+essential for interfacing with any OP Stack chain.</p>
+<p>The most succinct way to work with <code>op-alloy</code> is to add the <a href="https://crates.io/crates/op-alloy"><code>op-alloy</code></a> crate
+with the <code>full</code> feature flag from the command-line using Cargo.</p>
+<pre><code class="language-txt">cargo add op-alloy --features full
+</code></pre>
+<p>Alternatively, you can add the following to your <code>Cargo.toml</code> file.</p>
+<pre><code class="language-txt">op-alloy = { version = "0.5", features = ["full"] }
+</code></pre>
+<p>For more fine-grained control over the features you wish to include, you can add the individual
+crates to your <code>Cargo.toml</code> file, or use the <code>op-alloy</code> crate with the features you need.</p>
+<p>After <code>op-alloy</code> is added as a dependency, crates re-exported by <code>op-alloy</code> are now available.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use op_alloy::{
+   genesis::{RollupConfig, SystemConfig},
+   consensus::OpBlock,
+   protocol::BlockInfo,
+   network::Optimism,
+   provider::ext::engine::OpEngineApi,
+   rpc_types::OpTransactionReceipt,
+   rpc_jsonrpsee::traits::RollupNode,
+   rpc_types_engine::OpAttributesWithParent,
+};
+<span class="boring">}</span></code></pre></pre>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<p>The <a href="https://crates.io/crates/op-alloy"><code>op-alloy</code></a> defines many [feature flags][op-alloy-ff] including the following.</p>
+<p>Default</p>
+<ul>
+<li><code>std</code></li>
+<li><code>k256</code></li>
+<li><code>serde</code></li>
+</ul>
+<p>Full enables the most commonly used crates.</p>
+<ul>
+<li><code>full</code></li>
+</ul>
+<p>The <code>k256</code> feature flag enables the <code>k256</code> feature on the <code>op-alloy-consensus</code> crate.</p>
+<ul>
+<li><code>k256</code></li>
+</ul>
+<p>Arbitrary enables arbitrary features on crates, deriving the <code>Arbitrary</code> trait on types.</p>
+<ul>
+<li><code>arbitrary</code></li>
+</ul>
+<p>Serde derives serde's Serialize and Deserialize traits on types.</p>
+<ul>
+<li><code>serde</code></li>
+</ul>
+<p>Additionally, individual crates can be enabled using their shorthand names.
+For example, the <code>consensus</code> feature flag provides the <code>op-alloy-consensus</code> re-export
+so <code>op-alloy-consensus</code> types can be used from <code>op-alloy</code> through <code>op_alloy::consensus::InsertTypeHere</code>.</p>
+<h2 id="crates"><a class="header" href="#crates">Crates</a></h2>
+<ul>
+<li><a href="https://crates.io/crates/op-alloy-network"><code>op-alloy-network</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a> (supports <code>no_std</code>)</li>
+<li><a href="https://crates.io/crates/op-alloy-protocol"><code>op-alloy-protocol</code></a> (supports <code>no_std</code>)</li>
+<li><a href="https://crates.io/crates/op-alloy-provider"><code>op-alloy-provider</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-consensus"><code>op-alloy-consensus</code></a> (supports <code>no_std</code>)</li>
+<li><a href="https://crates.io/crates/op-alloy-rpc-jsonrpsee"><code>op-alloy-rpc-jsonrpsee</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-rpc-types"><code>op-alloy-rpc-types</code></a> (supports <code>no_std</code>)</li>
+<li><a href="https://crates.io/crates/op-alloy-rpc-types-engine"><code>op-alloy-rpc-types-engine</code></a> (supports <code>no_std</code>)</li>
+</ul>
+<h2 id="no_std"><a class="header" href="#no_std"><code>no_std</code></a></h2>
+<p>As noted above, the following crates are <code>no_std</code> compatible.</p>
+<ul>
+<li><a href="https://crates.io/crates/op-alloy-consensus"><code>op-alloy-consensus</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-protocol"><code>op-alloy-protocol</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-rpc-types-engine"><code>op-alloy-rpc-types-engine</code></a></li>
+<li><a href="https://crates.io/crates/op-alloy-rpc-types"><code>op-alloy-rpc-types</code></a></li>
+</ul>
+<p>To add <code>no_std</code> support to a crate, ensure the <a href="https://github.com/alloy-rs/op-alloy/blob/main/scripts/check_no_std.sh">check_no_std</a>
+script is updated to include this crate once <code>no_std</code> compatible.</p>
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="building"><a class="header" href="#building">Building</a></h1>
+<p>This section offers in-depth documentation into the various <code>op-alloy</code> crates.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="genesis"><a class="header" href="#genesis">Genesis</a></h1>
+<p>The genesis crate contains types related to chain genesis.</p>
+<p>This section contains in-depth sections on building with <a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a> crate types.</p>
+<ul>
+<li><a href="building/genesis/./rollup-config.html">The Rollup Config</a></li>
+<li><a href="building/genesis/./system-config.html">The System Config</a></li>
+</ul>
+<!-- Links -->
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rollup-configs"><a class="header" href="#rollup-configs">Rollup Configs</a></h1>
+<p>Rollup configurations are a consensus construct used to configure an Optimism Consensus client.
+When an OP Stack chain is deployed into production or consensus nodes are configured to sync the chain,
+certain consensus parameters can be configured. These parameters are defined in the
+<a href="https://specs.optimism.io/protocol/configurability.html">OP Stack specs</a>.</p>
+<p>Consensus parameters are consumed by OP Stack software through the <code>RollupConfig</code> type defined in the
+<a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a> crate.</p>
+<h2 id="rollupconfig-type"><a class="header" href="#rollupconfig-type"><code>RollupConfig</code> Type</a></h2>
+<p>The <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/rollup/struct.RollupConfig.html"><code>RollupConfig</code></a> type is defined in <a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a>.</p>
+<p>A predefined rollup config can be loaded from a given L2 chain id using
+the <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/rollup/fn.rollup_config_from_chain_id.html"><code>rollup_config_from_chain_id</code></a> method. An example is shown below.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use op_alloy_genesis::{OP_MAINNET_CONFIG, rollup_config_from_chain_id};
+
+let op_mainnet_config = rollup_config_from_chain_id(10).expect("infallible");
+assert_eq!(OP_MAINNET_CONFIG, op_mainnet_config);
+<span class="boring">}</span></code></pre></pre>
+<p>The <code>OP_MAINNET_CONFIG</code> is one of the predefined rollup configs exported by
+the <a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a> crate. Other predefined configs include
+the following.</p>
+<ul>
+<li><code>OP_MAINNET_CONFIG</code></li>
+<li><code>OP_SEPOLIA_CONFIG</code></li>
+<li><code>BASE_MAINNET_CONFIG</code></li>
+<li><code>BASE_SEPOLIA_CONFIG</code></li>
+</ul>
+<!-- Links -->
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="system-config"><a class="header" href="#system-config">System Config</a></h1>
+<p>The system configuration is a set of configurable chain parameters
+defined in a contract on L1. These parameters can be changed through
+the system config contract, emitting events that are picked up by
+the <a href="https://specs.optimism.io/protocol/derivation.html">rollup node derivation process</a>. To dive deeper
+into the System Config, visit the
+<a href="https://specs.optimism.io/protocol/system-config.html#system-config">OP Stack Specifications</a>.</p>
+<h2 id="systemconfig-type"><a class="header" href="#systemconfig-type"><code>SystemConfig</code> Type</a></h2>
+<p>The <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html"><code>SystemConfig</code></a> type is defined in
+<a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a>.</p>
+<p>Parameters defined in the <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html"><code>SystemConfig</code></a> are expected to be
+updated through L1 receipts, using the <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html#method.update_with_receipts"><code>update_with_receipts</code></a> method.</p>
+<h2 id="holocene-updates"><a class="header" href="#holocene-updates">Holocene Updates</a></h2>
+<p>The <a href="https://specs.optimism.io/protocol/holocene/overview.html">Holocene Hardfork</a> introduced an update to the
+<a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html"><code>SystemConfig</code></a> type, adding EIP-1559 parameters to the config.</p>
+<p>The <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html"><code>SystemConfig</code></a> type in <a href="https://crates.io/crates/op-alloy-genesis"><code>op-alloy-genesis</code></a> provides
+a method called <a href="https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html#method.eip_1559_params"><code>eip_1559_params</code></a> that returns the EIP-1559 parameters
+encoded as a <a href="https://docs.rs/alloy-primitives/latest/alloy_primitives/aliases/type.B64.html"><code>B64</code></a>.</p>
+<!-- Links -->
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="consensus"><a class="header" href="#consensus">Consensus</a></h1>
+<p><a href="https://crates.io/crates/op-alloy-consensus"><img src="https://img.shields.io/crates/v/op-alloy-consensus.svg" alt="op-alloy-consensus crate"></a></p>
+<p>The <code>op-alloy-consensus</code> crate provides an Optimism consensus interface.
+It contains constants, types, and functions for implementing Optimism EL
+consensus and communication. This includes an extended <code>OpTxEnvelope</code> type
+with <a href="https://specs.optimism.io/protocol/deposits.html">deposit transactions</a>, and receipts containing OP Stack
+specific fields (<code>deposit_nonce</code> + <code>deposit_receipt_version</code>).</p>
+<p>In general a type belongs in this crate if it exists in the
+<code>alloy-consensus</code> crate, but was modified from the base Ethereum protocol
+in the OP Stack. For consensus types that are not modified by the OP Stack,
+the <code>alloy-consensus</code> types should be used instead.</p>
+<h2 id="block"><a class="header" href="#block">Block</a></h2>
+<p><a href="https://crates.io/crates/op-alloy-consensus"><code>op-alloy-consensus</code></a> exports an Optimism block type, <a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/type.OpBlock.html"><code>OpBlock</code></a>.</p>
+<p>This type simply re-uses the <code>alloy-consensus</code> block type, with <code>OpTxEnvelope</code>
+as the type of transactions in the block.</p>
+<h2 id="transactions"><a class="header" href="#transactions">Transactions</a></h2>
+<p>Optimism extends the Ethereum <a href="https://eips.ethereum.org/EIPS/eip-2718">EIP-2718</a> transaction envelope to include a
+deposit variant.</p>
+<h3 id="optxenvelope"><a class="header" href="#optxenvelope"><a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxEnvelope.html"><code>OpTxEnvelope</code></a></a></h3>
+<p>The <a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxEnvelope.html"><code>OpTxEnvelope</code></a> type is based on <a href="https://github.com/alloy-rs/alloy">Alloy</a>'s
+<a href="https://docs.rs/alloy-consensus/latest/alloy_consensus/transaction/enum.TxEnvelope.html"><code>TxEnvelope</code></a> type.</p>
+<p>Optimism modifies the <code>TxEnvelope</code> to the following.</p>
+<ul>
+<li>Legacy</li>
+<li>EIP-2930</li>
+<li>EIP-1559</li>
+<li>EIP-7702</li>
+<li>Deposit</li>
+</ul>
+<p>Deposit is a custom transaction type that is either an L1 attributes
+deposit transaction or a user-submitted deposit transaction. Read more
+about deposit transactions in <a href="https://specs.optimism.io/protocol/deposits.html">the specs</a>.</p>
+<h3 id="transaction-types-optxtype"><a class="header" href="#transaction-types-optxtype">Transaction Types (<a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxType.html"><code>OpTxType</code></a>)</a></h3>
+<p>The <a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxType.html"><code>OpTxType</code></a> enumerates the transaction types using their byte identifier,
+represents as a <code>u8</code> in rust.</p>
+<h2 id="receipt-types"><a class="header" href="#receipt-types">Receipt Types</a></h2>
+<p>Just like <a href="https://crates.io/crates/op-alloy-consensus"><code>op-alloy-consensus</code></a> defines transaction types,
+it also defines associated receipt types.</p>
+<p><a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpReceiptEnvelope.html"><code>OpReceiptEnvelope</code></a> defines an <a href="https://eips.ethereum.org/EIPS/eip-2718">Eip-2718</a> receipt envelope type
+modified for the OP Stack. It contains the following variants - mapping
+directly to the <code>OpTxEnvelope</code> variants defined above.</p>
+<ul>
+<li>Legacy</li>
+<li>EIP-2930</li>
+<li>EIP-1559</li>
+<li>EIP-7702</li>
+<li>Deposit</li>
+</ul>
+<p>There is also an <a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/struct.OpDepositReceipt.html"><code>OpDepositReceipt</code></a> type, extending the alloy receipt
+type with a deposit nonce and deposit receipt version.</p>
+<h2 id="hardforks"><a class="header" href="#hardforks">Hardforks</a></h2>
+<p>Aside from transactions and receipts, <a href="https://crates.io/crates/op-alloy-consensus"><code>op-alloy-consensus</code></a> exports
+one other core primitive called <a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html"><code>Hardforks</code></a>.</p>
+<p>Hardforks provides hardfork transaction constructors - that is, it provides
+methods that return upgrade transactions for each hardfork. Some of these
+are the following.</p>
+<ul>
+<li><a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html#method.ecotone_txs"><code>Hardforks::ecotone_txs()</code></a></li>
+<li><a href="https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html#method.fjord_txs"><code>Hardforks::fjord_txs()</code></a></li>
+</ul>
+<!-- op-alloy -->
+<!-- op-alloy-genesis -->
+<!-- op-alloy-consensus -->
+<!-- Hardforks -->
+<!-- OP Stack Specs -->
+<!-- External -->
+<!-- Alloy -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rpc-engine-types"><a class="header" href="#rpc-engine-types">RPC Engine Types</a></h1>
+<p>The <a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpAttributesWithParent.html"><code>op-alloy-rpc-types-engine</code></a> crate provides Optimism types for interfacing
+with the Engine API in the OP Stack.</p>
+<p>Optimism defines a custom payload attributes type called <a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpPayloadAttributes.html"><code>OpPayloadAttributes</code></a>.
+<code>OpPayloadAttributes</code> extends alloy's <a href="https://docs.rs/alloy-rpc-types-engine/latest/alloy_rpc_types_engine/payload/struct.PayloadAttributes.html"><code>PayloadAttributes</code></a> with a few fields: transactions,
+a flag for enabling the tx pool, the gas limit, and EIP 1559 parameters.</p>
+<p>Wrapping <code>OpPayloadAttributes</code>, the <a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpAttributesWithParent.html"><code>OpAttributesWithParent</code></a> type extends payload
+attributes with the parent block (referenced as an [<code>L2BlockInfo</code>][lbi]) and a flag
+for whether the associated batch is the last batch in the span.</p>
+<p>Optimism also returns a custom type for the <code>engine_getPayload</code> request for both V3 and
+V4 payload envelopes. These are the <a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpExecutionPayloadEnvelopeV3.html"><code>OpExecutionPayloadEnvelopeV3</code></a> and
+<a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpExecutionPayloadEnvelopeV4.html"><code>OpExecutionPayloadEnvelopeV4</code></a> types, which both wrap payload envelope types
+from <a href="https://crates.io/crates/alloy-rpc-types-engine"><code>alloy-rpc-types-engine</code></a>.</p>
+<!-- Links -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="protocol"><a class="header" href="#protocol">Protocol</a></h1>
+<p>The <a href="https://crates.io/crates/op-alloy-protocol"><code>op-alloy-protocol</code></a> crate contains types, constants, and methods
+specific to Optimism derivation and batch-submission.</p>
+<p><a href="https://crates.io/crates/op-alloy-protocol"><code>op-alloy-protocol</code></a> supports <code>no_std</code>.</p>
+<h2 id="background"><a class="header" href="#background">Background</a></h2>
+<p>Protocol types are primarily used for L2 chain derivation. This section will
+break down L2 chain derivation as it relates to types defined in
+<code>op-alloy-protocol</code> - that is, from the raw L2 chain data posted to L1, to the
+<a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html"><code>Batch</code></a> type. And since the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html"><code>Batch</code></a> type naively breaks up
+into the payload attributes, once executed, it becomes the canonical L2 block!
+Note though, this provides an incredibly simplified introduction. It is advised
+to reference <a href="https://specs.optimism.io/protocol/derivation.html#overview">the specs</a> for the most up-to-date information regarding
+derivation.</p>
+<p>The L2 chain is derived from data posted to the L1 chain - either as calldata
+or blob data. Data is iteratively pulled from each L1 block and translated
+into the first type defined by <code>op-alloy-protocol</code>: the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Frame.html"><code>Frame</code></a> type.</p>
+<p><a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Frame.html"><code>Frame</code></a>s are <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Frame.html#method.parse_frames">parsed</a> from the raw data. Each <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Frame.html"><code>Frame</code></a>
+is a part of a <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a>, the next type one level up in deriving
+L2 blocks. <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a>s have IDs that frames reference. <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Frame.html"><code>Frame</code></a>s
+are <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html#method.add_frame">added</a> iteratively to the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a>. Once a
+<a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a> <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html#method.is_ready">is ready</a>, it can be used to read a <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html"><code>Batch</code></a>.</p>
+<p>Since a <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a> stitches together frames, it contains the raw frame
+data. In order to turn this <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.Channel.html"><code>Channel</code></a> data into a <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html"><code>Batch</code></a>,
+it needs to be decompressed using the respective (de)compression algorithm
+(see <a href="https://specs.optimism.io/protocol/derivation.html#channel-format">the channel specs</a> for more detail on this). Once
+decompressed, the raw data can be <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html#method.decode">decoded</a> into the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/enum.Batch.html"><code>Batch</code></a>
+type.</p>
+<h2 id="sections-1"><a class="header" href="#sections-1">Sections</a></h2>
+<ul>
+<li><a href="building/protocol/./block-info.html">BlockInfo and L2BlockInfo Types</a></li>
+</ul>
+<!-- Links -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="blockinfo-and-l2blockinfo-types"><a class="header" href="#blockinfo-and-l2blockinfo-types">BlockInfo and L2BlockInfo Types</a></h1>
+<p>Optimism defines block info types that encapsulate minimal block header
+information needed by protocol operations.</p>
+<h2 id="blockinfo"><a class="header" href="#blockinfo">BlockInfo</a></h2>
+<p>The <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.BlockInfo.html"><code>BlockInfo</code></a> type is straightforward, containing the block hash,
+number, parent hash, and timestamp.</p>
+<h2 id="l2blockinfo"><a class="header" href="#l2blockinfo">L2BlockInfo</a></h2>
+<p>The <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.L2BlockInfo.html"><code>L2BlockInfo</code></a> extends the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.BlockInfo.html"><code>BlockInfo</code></a> type for the canonical
+L2 chain. It contains the "L1 origin" which is a set of block info for the L1
+block that this L2 block "originated".</p>
+<p><a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.L2BlockInfo.html"><code>L2BlockInfo</code></a> provides a <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.L2BlockInfo.html#method.from_block_and_genesis"><code>from_block_and_gensis</code></a> method to
+construct the <a href="https://docs.rs/op-alloy-protocol/latest/op_alloy_protocol/struct.L2BlockInfo.html"><code>L2BlockInfo</code></a> from a block and <code>ChainGenesis</code>.</p>
+<!-- Links -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="examples-1"><a class="header" href="#examples-1">Examples</a></h1>
+<p>Examples for working with <code>op-alloy-*</code> crates.</p>
+<ul>
+<li><a href="examples/./load-a-rollup-config.html">Load a Rollup Config for a Chain ID</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="loading-a-rollup-config-from-a-chain-id"><a class="header" href="#loading-a-rollup-config-from-a-chain-id">Loading a Rollup Config from a Chain ID</a></h1>
+<p>In this section, the code examples demonstrate loading the
+rollup config for the given L2 Chain ID.</p>
+<p>Let's load the Rollup Config for OP Mainnet which hash chain id 10.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use op_alloy_genesis::{OP_MAINNET_CONFIG, rollup_config_from_chain_id};
+
+// The chain id for OP Mainnet
+let op_mainnet_id = 10;
+
+// Load a rollup config from the chain id.
+let op_mainnet_config = rollup_config_from_chain_id(op_mainnet_id).expect("infallible");
+
+// The chain id should match the hardcoded chain id.
+assert_eq!(OP_MAINNET_CONFIG, op_mainnet_config);
+<span class="boring">}</span></code></pre></pre>
+<blockquote>
+<p>⚠️ Available Configs</p>
+<p>The <code>rollup_config_from_chain_id</code> method in <code>op-alloy-genesis</code> uses hardcoded
+rollup configs. But, there are only a few of these hardcoded rollup configs in
+<code>op-alloy-genesis</code>. This method and these configs are provided for <code>no_std</code>
+environments where dynamic filesystem loading at runtime is not supported
+in <code>no_std</code> environments.</p>
+<p>In a <code>std</code> environment, the <a href="https://crates.io/crates/superchain">superchain</a> crate may be used which
+dynamically provides all rollup configs from the <a href="https://github.com/ethereum-optimism/superchain-registry">superchain-registry</a>
+for their respective chain ids.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributing-1"><a class="header" href="#contributing-1">Contributing</a></h1>
+<p>Thank you for wanting to contribute! Before contributing to this repository, please read through this document and
+discuss the change you wish to make via issue.</p>
+<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<p>Before working with this repository locally, you'll need to install several dependencies:</p>
+<ul>
+<li><a href="https://github.com/casey/just">Just</a> for our command-runner scripts.</li>
+<li><a href="https://rustup.rs/">The Rust toolchain</a>.</li>
+</ul>
+<p><strong>Optional</strong></p>
+<ul>
+<li><a href="https://github.com/rust-lang/mdBook">mdbook</a> to contribute to the <a href="/">book</a>
+<ul>
+<li><a href="https://github.com/sgoudham/mdbook-template">mdbook-template</a></li>
+<li><a href="https://github.com/badboy/mdbook-mermaid">mdbook-mermaid</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="pull-request-process"><a class="header" href="#pull-request-process">Pull Request Process</a></h2>
+<ol>
+<li>Before anything, <a href="https://github.com/alloy-rs/op-alloy/issues/new">create an issue</a> to discuss the change you're
+wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.</li>
+<li>Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
+be run locally via the <code>Justfile</code>s in the repository.</li>
+<li>Make sure to update any documentation that has gone stale as a result of the change, in the <code>README</code> files, the [book][book],
+and in rustdoc comments.</li>
+<li>Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
+If not, the maintainer who approves your pull request will add it to the merge queue.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="licensing-1"><a class="header" href="#licensing-1">Licensing</a></h1>
+<p>op-alloy is dually licensed under the <a href="https://github.com/alloy-rs/op-alloy/blob/main/LICENSE-APACHE">Apache 2.0</a> and the <a href="https://github.com/alloy-rs/op-alloy/blob/main/LICENSE-MIT">MIT</a> license.</p>
+<p>The <a href="https://github.com/alloy-rs/op-alloy/blob/main/SNAPPY-LICENSE">SNAPPY license</a> is added for the use of <a href="https://github.com/BurntSushi/rust-snappy">snap</a> in <code>op-alloy-rpc-types-engine</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
+<p><em>This document contains definitions for terms used throughout the op-alloy book.</em></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+        <script>
+            window.addEventListener('load', function () {
+                window.setTimeout(window.print, 100);
+            });
+        </script>
+
+    </div>
+</body>
+
+</html>
