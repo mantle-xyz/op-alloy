@@ -1,9 +1,16 @@
 //! Utility methods used by protocol types.
 
-use crate::{block_info::DecodeError, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
+use alloc::vec::Vec;
+use alloy_consensus::TxType;
 use alloy_primitives::B256;
+use alloy_rlp::{Buf, Header};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
+
+use crate::{
+    block_info::DecodeError, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, SpanBatchError,
+    SpanDecodingError,
+};
 
 /// Returns if the given `value` is a deposit transaction.
 pub fn starts_with_2718_deposit<B>(value: &B) -> bool
@@ -104,21 +111,6 @@ pub fn to_system_config(
         gas_limit: block.header.gas_limit,
         ..Default::default()
     };
-
-    // After holocene's activation, the EIP-1559 parameters are stored in the block header's nonce.
-    if rollup_config.is_holocene_active(block.header.timestamp) {
-        let eip1559_params = block.header.nonce;
-        cfg.eip1559_denominator = Some(u32::from_be_bytes(
-            eip1559_params[0..4]
-                .try_into()
-                .map_err(|_| OpBlockConversionError::Eip1559DecodeError)?,
-        ));
-        cfg.eip1559_elasticity = Some(u32::from_be_bytes(
-            eip1559_params[4..8]
-                .try_into()
-                .map_err(|_| OpBlockConversionError::Eip1559DecodeError)?,
-        ));
-    }
 
     Ok(cfg)
 }
@@ -224,6 +216,43 @@ fn u24(input: &[u8], idx: u32) -> u32 {
         + (u32::from(input[(idx + 2) as usize]) << 16)
 }
 
+/// Reads transaction data from a reader.
+pub fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatchError> {
+    let mut tx_data = Vec::new();
+    let first_byte =
+        *r.first().ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
+    let mut tx_type = 0;
+    if first_byte <= 0x7F {
+        // EIP-2718: Non-legacy tx, so write tx type
+        tx_type = first_byte;
+        tx_data.push(tx_type);
+        r.advance(1);
+    }
+
+    // Read the RLP header with a different reader pointer. This prevents the initial pointer from
+    // being advanced in the case that what we read is invalid.
+    let rlp_header = Header::decode(&mut (**r).as_ref())
+        .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
+
+    let tx_payload = if rlp_header.list {
+        // Grab the raw RLP for the transaction data from `r`. It was unaffected since we copied it.
+        let payload_length_with_header = rlp_header.payload_length + rlp_header.length();
+        let payload = r[0..payload_length_with_header].to_vec();
+        r.advance(payload_length_with_header);
+        Ok(payload)
+    } else {
+        Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))
+    }?;
+    tx_data.extend_from_slice(&tx_payload);
+
+    Ok((
+        tx_data,
+        tx_type
+            .try_into()
+            .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType))?,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,9 +262,8 @@ mod tests {
         primitives::{address, bytes, Bytecode, Bytes, TxKind, U256},
         Evm,
     };
-    use std::vec::Vec;
-
     use rstest::rstest;
+    use std::vec::Vec;
 
     #[rstest]
     #[case::empty(&[], 0)]

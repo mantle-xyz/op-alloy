@@ -16,10 +16,12 @@ workspace = true
 
 [dependencies]
 # Workspace
+op-alloy-consensus.workspace = true
 op-alloy-protocol.workspace = true
 
 # Alloy
 alloy-primitives.workspace = true
+alloy-eips.workspace = true
 alloy-rpc-types-engine.workspace = true
 
 # Encoding
@@ -35,8 +37,8 @@ derive_more = { workspace = true, features = ["display"] }
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 
 [dev-dependencies]
-serde_json.workspace = true
 arbtest.workspace = true
+serde_json.workspace = true
 arbitrary = { workspace = true, features = ["derive"] }
 
 [features]
@@ -47,6 +49,7 @@ std = [
   "alloy-rpc-types-engine/ssz",
   "alloy-primitives/std",
   "alloy-rpc-types-engine/std",
+  "op-alloy-consensus/std",
   "op-alloy-protocol/std",
 ]
 serde = [

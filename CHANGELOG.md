@@ -5,6 +5,138 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.6.5) - 2024-11-12
+
+### Dependencies
+
+- Bump alloy 064 ([#249](https://github.com/alloy-rs/op-alloy/issues/249))
+
+### Features
+
+- Wrap `TxDeposit` into `Sealed` in `OpTxEnvelope` ([#247](https://github.com/alloy-rs/op-alloy/issues/247))
+- Add nonce to RPC transaction ([#246](https://github.com/alloy-rs/op-alloy/issues/246))
+
+### Miscellaneous Tasks
+
+- Add deserde test ([#248](https://github.com/alloy-rs/op-alloy/issues/248))
+
+## [0.6.4](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.6.4) - 2024-11-12
+
+### Bug Fixes
+
+- [consensus] Add conversion for `OpTxType::Eip7702` ([#244](https://github.com/alloy-rs/op-alloy/issues/244))
+- [consensus] Fix arbitrary impl for `OpTxType` ([#242](https://github.com/alloy-rs/op-alloy/issues/242))
+
+### Miscellaneous Tasks
+
+- Release 0.6.4
+- Add is dynamic fee ([#245](https://github.com/alloy-rs/op-alloy/issues/245))
+
+## [0.6.3](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.6.3) - 2024-11-08
+
+### Dependencies
+
+- Bump Alloy Deps ([#239](https://github.com/alloy-rs/op-alloy/issues/239))
+
+### Features
+
+- Bump alloy ([#240](https://github.com/alloy-rs/op-alloy/issues/240))
+
+### Miscellaneous Tasks
+
+- Release 0.6.3
+
+## [0.6.2](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.6.2) - 2024-11-06
+
+### Bug Fixes
+
+- [protocol] Batch Decoding ([#235](https://github.com/alloy-rs/op-alloy/issues/235))
+- [book] Links Imports ([#227](https://github.com/alloy-rs/op-alloy/issues/227))
+
+### Features
+
+- Add fn for decoded 1559 params ([#236](https://github.com/alloy-rs/op-alloy/issues/236))
+- [book] Engine RPC Types ([#229](https://github.com/alloy-rs/op-alloy/issues/229))
+
+### Miscellaneous Tasks
+
+- Release 0.6.2
+- Move eip1559 impls ([#237](https://github.com/alloy-rs/op-alloy/issues/237))
+- [rpc-types] Clean up Exports ([#231](https://github.com/alloy-rs/op-alloy/issues/231))
+- [book] Consolidate Links ([#230](https://github.com/alloy-rs/op-alloy/issues/230))
+- [book] RPC Types ([#228](https://github.com/alloy-rs/op-alloy/issues/228))
+- [book] Protocol Docs ([#225](https://github.com/alloy-rs/op-alloy/issues/225))
+
+### Other
+
+- V0.6.1 ([#238](https://github.com/alloy-rs/op-alloy/issues/238))
+
+## [0.6.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.6.0) - 2024-11-06
+
+### Bug Fixes
+
+- [book] Small Book Touchups ([#220](https://github.com/alloy-rs/op-alloy/issues/220))
+- [ci] Remove Docs gh-page publish ([#216](https://github.com/alloy-rs/op-alloy/issues/216))
+- Ci powerset ([#214](https://github.com/alloy-rs/op-alloy/issues/214))
+- [book] Missing READMEs ([#213](https://github.com/alloy-rs/op-alloy/issues/213))
+
+### Dependencies
+
+- [wip] feat: bump alloy ([#205](https://github.com/alloy-rs/op-alloy/issues/205))
+- [workspace] Import Touchups ([#199](https://github.com/alloy-rs/op-alloy/issues/199))
+- Bump alloy ([#178](https://github.com/alloy-rs/op-alloy/issues/178))
+
+### Features
+
+- Add holocene extradata fn ([#233](https://github.com/alloy-rs/op-alloy/issues/233))
+- Add jsonrpsee trait for SuperchainSignal ([#217](https://github.com/alloy-rs/op-alloy/issues/217))
+- `OpTransactionRequest` ([#215](https://github.com/alloy-rs/op-alloy/issues/215))
+- [book] Consensus ([#212](https://github.com/alloy-rs/op-alloy/issues/212))
+- [book] Genesis - System Config ([#211](https://github.com/alloy-rs/op-alloy/issues/211))
+- `op-alloy` meta crate ([#210](https://github.com/alloy-rs/op-alloy/issues/210))
+- [book] Genesis - Rollup Config ([#209](https://github.com/alloy-rs/op-alloy/issues/209))
+- Book Setup ([#208](https://github.com/alloy-rs/op-alloy/issues/208))
+- README ([#207](https://github.com/alloy-rs/op-alloy/issues/207))
+- Book ([#206](https://github.com/alloy-rs/op-alloy/issues/206))
+- [protocol] Batch ([#200](https://github.com/alloy-rs/op-alloy/issues/200))
+- [protocol] Span Batch Validity Checks ([#198](https://github.com/alloy-rs/op-alloy/issues/198))
+- [protocol] Span Batch Type ([#197](https://github.com/alloy-rs/op-alloy/issues/197))
+- [protocol] Span Batch Transactions ([#196](https://github.com/alloy-rs/op-alloy/issues/196))
+- [protocol] Batch TX Data ([#195](https://github.com/alloy-rs/op-alloy/issues/195))
+- [protocol] Span Batch Bits ([#194](https://github.com/alloy-rs/op-alloy/issues/194))
+- [protocol] Span Batch Element ([#193](https://github.com/alloy-rs/op-alloy/issues/193))
+- [protocol] Batch Utilities ([#191](https://github.com/alloy-rs/op-alloy/issues/191))
+- [protocol] Batch Error Types ([#190](https://github.com/alloy-rs/op-alloy/issues/190))
+- [protocol] BatchValidationProvider ([#189](https://github.com/alloy-rs/op-alloy/issues/189))
+- [protocol] SingleBatch Type ([#188](https://github.com/alloy-rs/op-alloy/issues/188))
+- [protocol] Batch Validity ([#187](https://github.com/alloy-rs/op-alloy/issues/187))
+- [protocol] Batch Type ([#186](https://github.com/alloy-rs/op-alloy/issues/186))
+- [rpc-types] `{Try}From` impl for `OpTransactionReceipt` + `Transaction` -> consensus types ([#183](https://github.com/alloy-rs/op-alloy/issues/183))
+- [genesis] EIP 1559 System Config Accessor ([#179](https://github.com/alloy-rs/op-alloy/issues/179))
+
+### Miscellaneous Tasks
+
+- Release 0.6.0
+- [book] Load Rollup Config Example ([#224](https://github.com/alloy-rs/op-alloy/issues/224))
+- [book] Genesis Docs ([#223](https://github.com/alloy-rs/op-alloy/issues/223))
+- [book] Consensus Docs ([#222](https://github.com/alloy-rs/op-alloy/issues/222))
+- [ci] Use Justfile Targets in Github Actions ([#219](https://github.com/alloy-rs/op-alloy/issues/219))
+- [book] Fix Doc Links ([#218](https://github.com/alloy-rs/op-alloy/issues/218))
+- Release 0.5.2 ([#201](https://github.com/alloy-rs/op-alloy/issues/201))
+- [consensus] Upstream Receipt Constructor ([#165](https://github.com/alloy-rs/op-alloy/issues/165))
+- Release 0.5.1 ([#184](https://github.com/alloy-rs/op-alloy/issues/184))
+- [consensus] Small Cleanup ([#180](https://github.com/alloy-rs/op-alloy/issues/180))
+- Dependency Updates ([#177](https://github.com/alloy-rs/op-alloy/issues/177))
+
+### Other
+
+- Add arbitrary attr ([#182](https://github.com/alloy-rs/op-alloy/issues/182))
+
 ## [0.5.0](https://github.com/alloy-rs/op-alloy
 /releases/tag/v0.5.0) - 2024-10-18
 
@@ -19,6 +151,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Op network execution payload envelope decoding ([#149](https://github.com/alloy-rs/op-alloy/issues/149))
 - [rollup] Backward-activate forks in `RollupConfig` ([#170](https://github.com/alloy-rs/op-alloy/issues/170))
 - [envelope] Add missing `From<Signed<TxEip7702>>` ([#168](https://github.com/alloy-rs/op-alloy/issues/168))
+
+### Miscellaneous Tasks
+
+- Release 0.5.0
 
 ## [0.4.0](https://github.com/alloy-rs/op-alloy
 /releases/tag/v0.4.0) - 2024-10-09

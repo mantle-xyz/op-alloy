@@ -8,7 +8,7 @@ use alloc::{
 };
 use alloy_consensus::Header;
 use alloy_eips::BlockNumHash;
-use alloy_primitives::{address, Address, Bytes, TxKind, B256, U256};
+use alloy_primitives::{address, Address, Bytes, Sealable, TxKind, B256, U256};
 use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 
@@ -174,55 +174,20 @@ impl core::error::Error for DecodeError {}
 impl L1BlockInfoTx {
     /// Creates a new [L1BlockInfoTx] from the given information.
     pub fn try_new(
-        rollup_config: &RollupConfig,
         system_config: &SystemConfig,
         sequence_number: u64,
         l1_header: &Header,
-        l2_block_time: u64,
     ) -> Result<Self, BlockInfoError> {
-        // In the first block of Ecotone, the L1Block contract has not been upgraded yet due to the
-        // upgrade transactions being placed after the L1 info transaction. Because of this,
-        // for the first block of Ecotone, we send a Bedrock style L1 block info transaction
-        if rollup_config.is_ecotone_active(l2_block_time)
-            && rollup_config.ecotone_time.unwrap_or_default() != l2_block_time
-        {
-            let scalar = system_config.scalar.to_be_bytes::<32>();
-            let blob_base_fee_scalar = (scalar[0] == L1_SCALAR_ECOTONE)
-                .then(|| {
-                    Ok::<u32, BlockInfoError>(u32::from_be_bytes(
-                        scalar[24..28]
-                            .try_into()
-                            .map_err(|_| BlockInfoError::L1BlobBaseFeeScalar)?,
-                    ))
-                })
-                .transpose()?
-                .unwrap_or_default();
-            let base_fee_scalar = u32::from_be_bytes(
-                scalar[28..32].try_into().map_err(|_| BlockInfoError::BaseFeeScalar)?,
-            );
-            Ok(Self::Ecotone(L1BlockInfoEcotone {
-                number: l1_header.number,
-                time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
-                block_hash: l1_header.hash_slow(),
-                sequence_number,
-                batcher_address: system_config.batcher_address,
-                blob_base_fee: l1_header.blob_fee().unwrap_or(1),
-                blob_base_fee_scalar,
-                base_fee_scalar,
-            }))
-        } else {
-            Ok(Self::Bedrock(L1BlockInfoBedrock {
-                number: l1_header.number,
-                time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
-                block_hash: l1_header.hash_slow(),
-                sequence_number,
-                batcher_address: system_config.batcher_address,
-                l1_fee_overhead: system_config.overhead,
-                l1_fee_scalar: system_config.scalar,
-            }))
-        }
+        Ok(Self::Bedrock(L1BlockInfoBedrock {
+            number: l1_header.number,
+            time: l1_header.timestamp,
+            base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
+            block_hash: l1_header.hash_slow(),
+            sequence_number,
+            batcher_address: system_config.batcher_address,
+            l1_fee_overhead: system_config.overhead,
+            l1_fee_scalar: system_config.scalar,
+        }))
     }
 
     /// Creates a new [L1BlockInfoTx] from the given information and returns a typed [TxDeposit] to
@@ -234,8 +199,7 @@ impl L1BlockInfoTx {
         l1_header: &Header,
         l2_block_time: u64,
     ) -> Result<(Self, OpTxEnvelope), BlockInfoError> {
-        let l1_info =
-            Self::try_new(rollup_config, system_config, sequence_number, l1_header, l2_block_time)?;
+        let l1_info = Self::try_new(system_config, sequence_number, l1_header)?;
 
         let source = DepositSourceDomain::L1Info(L1InfoDepositSource {
             l1_block_hash: l1_info.block_hash(),
@@ -251,6 +215,8 @@ impl L1BlockInfoTx {
             gas_limit: 150_000_000,
             is_system_transaction: true,
             input: l1_info.encode_calldata(),
+            eth_value: None,
+            eth_tx_value: None,
         };
 
         // With the regolith hardfork, system transactions were deprecated, and we allocate
@@ -260,7 +226,7 @@ impl L1BlockInfoTx {
             deposit_tx.gas_limit = REGOLITH_SYSTEM_TX_GAS;
         }
 
-        Ok((l1_info, OpTxEnvelope::Deposit(deposit_tx)))
+        Ok((l1_info, OpTxEnvelope::Deposit(deposit_tx.seal_slow())))
     }
 
     /// Decodes the [L1BlockInfoEcotone] object from ethereum transaction calldata.
@@ -570,14 +536,7 @@ mod test {
         let l1_header = Header::default();
         let l2_block_time = 0;
 
-        let l1_info = L1BlockInfoTx::try_new(
-            &rollup_config,
-            &system_config,
-            sequence_number,
-            &l1_header,
-            l2_block_time,
-        )
-        .unwrap();
+        let l1_info = L1BlockInfoTx::try_new(&system_config, sequence_number, &l1_header).unwrap();
 
         let L1BlockInfoTx::Bedrock(l1_info) = l1_info else {
             panic!("Wrong fork");
@@ -595,20 +554,12 @@ mod test {
 
     #[test]
     fn try_new_with_deposit_tx_ecotone() {
-        let rollup_config = RollupConfig { ecotone_time: Some(1), ..Default::default() };
         let system_config = SystemConfig::default();
         let sequence_number = 0;
         let l1_header = Header::default();
         let l2_block_time = 0xFF;
 
-        let l1_info = L1BlockInfoTx::try_new(
-            &rollup_config,
-            &system_config,
-            sequence_number,
-            &l1_header,
-            l2_block_time,
-        )
-        .unwrap();
+        let l1_info = L1BlockInfoTx::try_new(&system_config, sequence_number, &l1_header).unwrap();
 
         let L1BlockInfoTx::Ecotone(l1_info) = l1_info else {
             panic!("Wrong fork");

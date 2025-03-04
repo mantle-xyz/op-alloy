@@ -4,6 +4,7 @@ alias l := lint
 alias f := fmtf
 alias b := build
 alias h := hack
+alias c := check
 
 # default recipe to display help information
 default:
@@ -18,22 +19,25 @@ test:
 
 # Test the Rust documentation
 test-docs:
-  cargo test --doc --all --locked
+  cargo test --doc --all
 
 # Lint the workspace for all available targets
 lint: lint-native lint-docs
 
 # Lint the workspace
-lint-native: fmt-native-check lint-docs
-  cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
+lint-native: fmt-check lint-docs clippy
+
+# Checks the workspace with clippy
+clippy:
+  cargo +stable clippy --workspace --all-features --all-targets -- -D warnings
 
 # Check the formatting of the workspace
-fmt-native-check:
+fmt-check:
   cargo +nightly fmt --all -- --check
 
 # Lint the Rust documentation
 lint-docs:
-  RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items 
+  RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
 
 # Fixes the formatting of the workspace
 fmtf:
@@ -43,6 +47,10 @@ fmtf:
 build *args='':
   cargo build --workspace $@
 
+# Checks the workspace with a cfg-check
+check:
+  cargo check -Zcheck-cfg --workspace
+
 # Runs `cargo hack check` against the workspace
 hack:
-  cargo hack check --feature-powerset --no-dev-deps
+  cargo hack check --feature-powerset --no-dev-deps --exclude op-alloy --workspace

@@ -42,7 +42,7 @@ impl alloy_network_primitives::ReceiptResponse for OpTransactionReceipt {
         self.inner.transaction_index()
     }
 
-    fn gas_used(&self) -> u128 {
+    fn gas_used(&self) -> u64 {
         self.inner.gas_used()
     }
 
@@ -50,7 +50,7 @@ impl alloy_network_primitives::ReceiptResponse for OpTransactionReceipt {
         self.inner.effective_gas_price()
     }
 
-    fn blob_gas_used(&self) -> Option<u128> {
+    fn blob_gas_used(&self) -> Option<u64> {
         self.inner.blob_gas_used()
     }
 
@@ -66,11 +66,7 @@ impl alloy_network_primitives::ReceiptResponse for OpTransactionReceipt {
         self.inner.to()
     }
 
-    fn authorization_list(&self) -> Option<&[alloy_eips::eip7702::SignedAuthorization]> {
-        self.inner.authorization_list()
-    }
-
-    fn cumulative_gas_used(&self) -> u128 {
+    fn cumulative_gas_used(&self) -> u64 {
         self.inner.cumulative_gas_used()
     }
 
@@ -93,12 +89,11 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Regolith hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_nonce: Option<u64>,
-    /* ---------------------------------------- Canyon ---------------------------------------- */
-    /// Deposit receipt version for deposit transactions.
-    ///
-    /// Always null prior to the Canyon hardfork.
+
+    /* --------------------------------------- Regolith --------------------------------------- */
+    /// token ratio between eth and mnt
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub deposit_receipt_version: Option<u64>,
+    pub token_ratio: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string

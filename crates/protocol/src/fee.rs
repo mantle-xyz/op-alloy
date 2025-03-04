@@ -56,6 +56,7 @@ pub fn calculate_tx_l1_cost_bedrock(
     l1_fee_overhead: U256,
     base_fee: U256,
     l1_fee_scalar: U256,
+    token_ratio: U256,
 ) -> U256 {
     if input.is_empty() || input.first() == Some(&0x7F) {
         return U256::ZERO;
@@ -66,6 +67,7 @@ pub fn calculate_tx_l1_cost_bedrock(
         .saturating_add(l1_fee_overhead)
         .saturating_mul(base_fee)
         .saturating_mul(l1_fee_scalar)
+        .saturating_mul(token_ratio)
         .wrapping_div(U256::from(1_000_000))
 }
 
@@ -75,6 +77,7 @@ pub fn calculate_tx_l1_cost_regolith(
     l1_fee_overhead: U256,
     base_fee: U256,
     l1_fee_scalar: U256,
+    token_ratio: U256,
 ) -> U256 {
     if input.is_empty() || input.first() == Some(&0x7F) {
         return U256::ZERO;
@@ -85,6 +88,7 @@ pub fn calculate_tx_l1_cost_regolith(
         .saturating_add(l1_fee_overhead)
         .saturating_mul(base_fee)
         .saturating_mul(l1_fee_scalar)
+        .saturating_mul(token_ratio)
         .wrapping_div(U256::from(1_000_000))
 }
 
@@ -238,25 +242,41 @@ mod tests {
         let base_fee = U256::from(1_000);
         let l1_fee_overhead = U256::from(1_000);
         let l1_fee_scalar = U256::from(1_000);
+        let token_ratio = U256::from(1_000);
 
         // calldataGas * (l1BaseFee * 16 * l1BaseFeeScalar + l1BlobBaseFee * l1BlobBaseFeeScalar) /
         // (16 * 1e6) = (16 * 3 + 16 * 68 + 1000) * 1000 * 1000 / (1_000_000)
         // = 2136
         let input = bytes!("FACADE");
-        let gas_cost =
-            calculate_tx_l1_cost_bedrock(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_bedrock(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::from(2136));
 
         // Zero rollup data gas cost should result in zero
         let input = bytes!("");
-        let gas_cost =
-            calculate_tx_l1_cost_bedrock(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_bedrock(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::ZERO);
 
         // Deposit transactions with the EIP-2718 type of 0x7F should result in zero
         let input = bytes!("7FFACADE");
-        let gas_cost =
-            calculate_tx_l1_cost_bedrock(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_bedrock(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::ZERO);
     }
 
@@ -266,25 +286,41 @@ mod tests {
         let base_fee = U256::from(1_000);
         let l1_fee_overhead = U256::from(1_000);
         let l1_fee_scalar = U256::from(1_000);
+        let token_ratio = U256::from(1_000);
 
         // calldataGas * (l1BaseFee * 16 * l1BaseFeeScalar + l1BlobBaseFee * l1BlobBaseFeeScalar) /
         // (16 * 1e6) = (16 * 3 + 1000) * 1000 * 1000 / (1_000_000)
         // = 1048
         let input = bytes!("FACADE");
-        let gas_cost =
-            calculate_tx_l1_cost_regolith(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_regolith(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::from(1048));
 
         // Zero rollup data gas cost should result in zero
         let input = bytes!("");
-        let gas_cost =
-            calculate_tx_l1_cost_regolith(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_regolith(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::ZERO);
 
         // Deposit transactions with the EIP-2718 type of 0x7F should result in zero
         let input = bytes!("7FFACADE");
-        let gas_cost =
-            calculate_tx_l1_cost_regolith(&input, l1_fee_overhead, base_fee, l1_fee_scalar);
+        let gas_cost = calculate_tx_l1_cost_regolith(
+            &input,
+            l1_fee_overhead,
+            base_fee,
+            l1_fee_scalar,
+            token_ratio,
+        );
         assert_eq!(gas_cost, U256::ZERO);
     }
 

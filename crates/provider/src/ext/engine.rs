@@ -190,11 +190,12 @@ pub trait OpEngineApi<N, T>: Send + Sync {
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<N, T, P> OpEngineApi<N, T> for P
 where
     N: Network,
     T: Transport + Clone,
-    P: Provider<T, N>,
+    P: Provider<N>,
 {
     async fn new_payload_v2(
         &self,

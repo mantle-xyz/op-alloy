@@ -1,6 +1,7 @@
 use crate::{OpTxEnvelope, OpTxType, TxDeposit};
 use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy};
 use alloy_eips::eip2930::AccessList;
+use alloy_eips::Typed2718;
 use alloy_primitives::{Address, Bytes, TxKind};
 
 /// The TypedTransaction enum represents all Ethereum transaction request types, modified for the OP
@@ -12,23 +13,25 @@ use alloy_primitives::{Address, Bytes, TxKind};
 /// 3. EIP1559 [`TxEip1559`]
 /// 4. Deposit [`TxDeposit`]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        from = "serde_from::MaybeTaggedTypedTransaction",
+        into = "serde_from::TaggedTypedTransaction"
+    )
+)]
 pub enum OpTypedTransaction {
     /// Legacy transaction
-    #[cfg_attr(feature = "serde", serde(rename = "0x00", alias = "0x0"))]
     Legacy(TxLegacy),
     /// EIP-2930 transaction
-    #[cfg_attr(feature = "serde", serde(rename = "0x01", alias = "0x1"))]
     Eip2930(TxEip2930),
     /// EIP-1559 transaction
-    #[cfg_attr(feature = "serde", serde(rename = "0x02", alias = "0x2"))]
     Eip1559(TxEip1559),
     /// EIP-7702 transaction
-    #[cfg_attr(feature = "serde", serde(rename = "0x04", alias = "0x4"))]
     Eip7702(TxEip7702),
     /// Optimism deposit transaction
-    #[cfg_attr(feature = "serde", serde(rename = "0x7E", alias = "0x7E"))]
     Deposit(TxDeposit),
 }
 
@@ -63,7 +66,7 @@ impl From<OpTxEnvelope> for OpTypedTransaction {
             OpTxEnvelope::Eip2930(tx) => Self::Eip2930(tx.strip_signature()),
             OpTxEnvelope::Eip1559(tx) => Self::Eip1559(tx.strip_signature()),
             OpTxEnvelope::Eip7702(tx) => Self::Eip7702(tx.strip_signature()),
-            OpTxEnvelope::Deposit(tx) => Self::Deposit(tx),
+            OpTxEnvelope::Deposit(tx) => Self::Deposit(tx.into_inner()),
         }
     }
 }
@@ -109,6 +112,23 @@ impl OpTypedTransaction {
         match self {
             Self::Deposit(tx) => Some(tx),
             _ => None,
+        }
+    }
+
+    /// Returns `true` if transaction is deposit transaction.
+    pub const fn is_deposit(&self) -> bool {
+        matches!(self, Self::Deposit(_))
+    }
+}
+
+impl Typed2718 for OpTypedTransaction {
+    fn ty(&self) -> u8 {
+        match self {
+            Self::Legacy(_) => OpTxType::Legacy as u8,
+            Self::Eip2930(_) => OpTxType::Eip2930 as u8,
+            Self::Eip1559(_) => OpTxType::Eip1559 as u8,
+            Self::Eip7702(_) => OpTxType::Eip7702 as u8,
+            Self::Deposit(_) => OpTxType::Deposit as u8,
         }
     }
 }
@@ -194,13 +214,23 @@ impl Transaction for OpTypedTransaction {
         }
     }
 
-    fn to(&self) -> Option<Address> {
+    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
         match self {
-            Self::Legacy(tx) => tx.to(),
-            Self::Eip2930(tx) => tx.to(),
-            Self::Eip1559(tx) => tx.to(),
-            Self::Eip7702(tx) => tx.to(),
-            Self::Deposit(tx) => tx.to(),
+            Self::Legacy(tx) => tx.effective_gas_price(base_fee),
+            Self::Eip2930(tx) => tx.effective_gas_price(base_fee),
+            Self::Eip1559(tx) => tx.effective_gas_price(base_fee),
+            Self::Eip7702(tx) => tx.effective_gas_price(base_fee),
+            Self::Deposit(tx) => tx.effective_gas_price(base_fee),
+        }
+    }
+
+    fn is_dynamic_fee(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.is_dynamic_fee(),
+            Self::Eip2930(tx) => tx.is_dynamic_fee(),
+            Self::Eip1559(tx) => tx.is_dynamic_fee(),
+            Self::Eip7702(tx) => tx.is_dynamic_fee(),
+            Self::Deposit(tx) => tx.is_dynamic_fee(),
         }
     }
 
@@ -211,6 +241,26 @@ impl Transaction for OpTypedTransaction {
             Self::Eip1559(tx) => tx.kind(),
             Self::Eip7702(tx) => tx.kind(),
             Self::Deposit(tx) => tx.kind(),
+        }
+    }
+
+    fn is_create(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.is_create(),
+            Self::Eip2930(tx) => tx.is_create(),
+            Self::Eip1559(tx) => tx.is_create(),
+            Self::Eip7702(tx) => tx.is_create(),
+            Self::Deposit(tx) => tx.is_create(),
+        }
+    }
+
+    fn to(&self) -> Option<Address> {
+        match self {
+            Self::Legacy(tx) => tx.to(),
+            Self::Eip2930(tx) => tx.to(),
+            Self::Eip1559(tx) => tx.to(),
+            Self::Eip7702(tx) => tx.to(),
+            Self::Deposit(tx) => tx.to(),
         }
     }
 
@@ -231,16 +281,6 @@ impl Transaction for OpTypedTransaction {
             Self::Eip1559(tx) => tx.input(),
             Self::Eip7702(tx) => tx.input(),
             Self::Deposit(tx) => tx.input(),
-        }
-    }
-
-    fn ty(&self) -> u8 {
-        match self {
-            Self::Legacy(_) => OpTxType::Legacy as u8,
-            Self::Eip2930(_) => OpTxType::Eip2930 as u8,
-            Self::Eip1559(_) => OpTxType::Eip1559 as u8,
-            Self::Eip7702(_) => OpTxType::Eip7702 as u8,
-            Self::Deposit(_) => OpTxType::Deposit as u8,
         }
     }
 
@@ -271,6 +311,82 @@ impl Transaction for OpTypedTransaction {
             Self::Eip1559(tx) => tx.authorization_list(),
             Self::Eip7702(tx) => tx.authorization_list(),
             Self::Deposit(tx) => tx.authorization_list(),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_from {
+    //! NB: Why do we need this?
+    //!
+    //! Because the tag may be missing, we need an abstraction over tagged (with
+    //! type) and untagged (always legacy). This is
+    //! [`MaybeTaggedTypedTransaction`].
+    //!
+    //! The tagged variant is [`TaggedTypedTransaction`], which always has a
+    //! type tag.
+    //!
+    //! We serialize via [`TaggedTypedTransaction`] and deserialize via
+    //! [`MaybeTaggedTypedTransaction`].
+    use super::*;
+
+    #[derive(Debug, serde::Deserialize)]
+    #[serde(untagged)]
+    pub(crate) enum MaybeTaggedTypedTransaction {
+        Tagged(TaggedTypedTransaction),
+        Untagged(TxLegacy),
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    #[serde(tag = "type")]
+    pub(crate) enum TaggedTypedTransaction {
+        /// Legacy transaction
+        #[serde(rename = "0x00", alias = "0x0")]
+        Legacy(TxLegacy),
+        /// EIP-2930 transaction
+        #[serde(rename = "0x01", alias = "0x1")]
+        Eip2930(TxEip2930),
+        /// EIP-1559 transaction
+        #[serde(rename = "0x02", alias = "0x2")]
+        Eip1559(TxEip1559),
+        /// EIP-7702 transaction
+        #[serde(rename = "0x04", alias = "0x4")]
+        Eip7702(TxEip7702),
+        /// Deposit transaction
+        #[serde(rename = "0x7e", alias = "0x7E", serialize_with = "crate::serde_deposit_tx_rpc")]
+        Deposit(TxDeposit),
+    }
+
+    impl From<MaybeTaggedTypedTransaction> for OpTypedTransaction {
+        fn from(value: MaybeTaggedTypedTransaction) -> Self {
+            match value {
+                MaybeTaggedTypedTransaction::Tagged(tagged) => tagged.into(),
+                MaybeTaggedTypedTransaction::Untagged(tx) => Self::Legacy(tx),
+            }
+        }
+    }
+
+    impl From<TaggedTypedTransaction> for OpTypedTransaction {
+        fn from(value: TaggedTypedTransaction) -> Self {
+            match value {
+                TaggedTypedTransaction::Legacy(signed) => Self::Legacy(signed),
+                TaggedTypedTransaction::Eip2930(signed) => Self::Eip2930(signed),
+                TaggedTypedTransaction::Eip1559(signed) => Self::Eip1559(signed),
+                TaggedTypedTransaction::Eip7702(signed) => Self::Eip7702(signed),
+                TaggedTypedTransaction::Deposit(tx) => Self::Deposit(tx),
+            }
+        }
+    }
+
+    impl From<OpTypedTransaction> for TaggedTypedTransaction {
+        fn from(value: OpTypedTransaction) -> Self {
+            match value {
+                OpTypedTransaction::Legacy(signed) => Self::Legacy(signed),
+                OpTypedTransaction::Eip2930(signed) => Self::Eip2930(signed),
+                OpTypedTransaction::Eip1559(signed) => Self::Eip1559(signed),
+                OpTypedTransaction::Eip7702(signed) => Self::Eip7702(signed),
+                OpTypedTransaction::Deposit(tx) => Self::Deposit(tx),
+            }
         }
     }
 }
