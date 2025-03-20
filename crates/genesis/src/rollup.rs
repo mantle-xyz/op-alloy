@@ -188,7 +188,7 @@ pub const MANTLE_MAINNET_CONFIG: RollupConfig = RollupConfig {
     l2_chain_id: 5_000_u64,
     regolith_time: Some(0_u64),
     base_fee_time: None,
-    batch_inbox_address: address!("ff00000000000000000000000000000000000000"),
+    batch_inbox_address: address!("ffeeddccbbaa0000000000000000000000000000"),
     deposit_contract_address: address!("c54cb22944f2be476e02decfcd7e3e7d3e15a8fb"),
     l1_system_config_address: address!("427ea0710fa5252057f0d88274f7aeb308386caf"),
     mantle_da_switch: true,
@@ -276,7 +276,8 @@ mod tests {
       "batcherAddr": "0xc81f87a644b41e49b3221f41251f15c6cb00ce03",
       "overhead": "0x0000000000000000000000000000000000000000000000000000000000000000",
       "scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
-      "gasLimit": 30000000
+      "gasLimit": 30000000,
+      "baseFee": 20000000
     }
   },
   "block_time": 2,
@@ -286,7 +287,7 @@ mod tests {
   "l1_chain_id": 3151908,
   "l2_chain_id": 1337,
   "regolith_time": 0,
-  "batch_inbox_address": "0xff00000000000000000000000000000000042069",
+  "batch_inbox_address": "0xffeeddccbbaa0000000000000000000000000000",
   "deposit_contract_address": "0x08073dc48dde578137b8af042bcbc1c2491f1eb2",
   "l1_system_config_address": "0x94ee52a9d8edd72a85dea7fae3ba6d75e4bf1710",
   "mantle_da_switch": true,
@@ -313,7 +314,7 @@ mod tests {
                     overhead: U256::ZERO,
                     scalar: U256::from(0xf4240),
                     gas_limit: 30_000_000,
-                    base_fee: U256::ZERO,
+                    base_fee: U256::from(20_000_000),
                 })
             }
         );
@@ -326,7 +327,7 @@ mod tests {
         assert_eq!(config.regolith_time, Some(0));
         assert_eq!(
             config.batch_inbox_address,
-            address!("ff00000000000000000000000000000000042069")
+            address!("ffeeddccbbaa0000000000000000000000000000")
         );
         assert_eq!(
             config.deposit_contract_address,

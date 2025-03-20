@@ -359,7 +359,7 @@ pub(crate) fn unmarshal_deposit_version0(
     to: Address,
     data: &[u8],
 ) -> Result<(), DepositError> {
-    if data.len() < 32 + 32 + 8 + 1 {
+    if data.len() < 32 + 32 + 32 + 8 + 1 {
         return Err(DepositError::UnexpectedOpaqueDataLen(data.len()));
     }
 
@@ -407,7 +407,7 @@ pub(crate) fn unmarshal_deposit_version1(
     to: Address,
     data: &[u8],
 ) -> Result<(), DepositError> {
-    if data.len() < 32 + 32 + 8 + 1 {
+    if data.len() < 32 + 32 + 32 + 32 + 8 + 1 {
         return Err(DepositError::UnexpectedOpaqueDataLen(data.len()));
     }
 

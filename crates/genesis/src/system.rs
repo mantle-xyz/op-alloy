@@ -615,7 +615,7 @@ mod test {
         let receipt = Receipt {
             logs: vec![update_log],
             status: Eip658Value::Eip658(true),
-            cumulative_gas_used: 0u128,
+            cumulative_gas_used: 0_u64,
         };
 
         system_config.update_with_receipts(&[receipt], l1_system_config_address).unwrap();
