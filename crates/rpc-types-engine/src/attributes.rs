@@ -31,7 +31,7 @@ pub struct OpPayloadAttributes {
     ///
     /// Prior to Holocene activation, this field should always be [None].
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub base_fee: Option<u128>,
+    pub eip_1559_params: Option<B64>,
 }
 
 impl OpPayloadAttributes {
@@ -75,7 +75,7 @@ mod test {
             transactions: Some(vec![b"hello".to_vec().into()]),
             no_tx_pool: Some(true),
             gas_limit: Some(42),
-            base_fee: Some(100_000),
+            eip_1559_params: None,
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();

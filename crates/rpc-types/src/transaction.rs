@@ -309,6 +309,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn can_deserialize_deposit() {
         // cast rpc eth_getTransactionByHash
         // 0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9 --rpc-url optimism

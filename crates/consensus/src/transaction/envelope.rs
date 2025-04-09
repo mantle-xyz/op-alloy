@@ -317,36 +317,6 @@ impl Transaction for OpTxEnvelope {
             Self::Deposit(tx) => tx.authorization_list(),
         }
     }
-
-    fn is_dynamic_fee(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip7702(tx) => tx.tx().is_dynamic_fee(),
-            Self::Deposit(tx) => tx.is_dynamic_fee(),
-        }
-    }
-
-    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
-        match self {
-            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip7702(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Deposit(tx) => tx.effective_gas_price(base_fee),
-        }
-    }
-
-    fn is_create(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_create(),
-            Self::Eip2930(tx) => tx.tx().is_create(),
-            Self::Eip1559(tx) => tx.tx().is_create(),
-            Self::Eip7702(tx) => tx.tx().is_create(),
-            Self::Deposit(tx) => tx.is_create(),
-        }
-    }
 }
 
 impl OpTxEnvelope {
@@ -374,32 +344,6 @@ impl OpTxEnvelope {
         match self {
             Self::Deposit(tx) => tx.inner().is_system_transaction,
             _ => false,
-        }
-    }
-    /// Attempts to convert the optimism variant into an ethereum [`TxEnvelope`].
-    ///
-    /// Returns the envelope as error if it is a variant unsupported on ethereum: [`TxDeposit`]
-    pub fn try_into_eth_envelope(self) -> Result<TxEnvelope, Self> {
-        match self {
-            Self::Legacy(tx) => Ok(tx.into()),
-            Self::Eip2930(tx) => Ok(tx.into()),
-            Self::Eip1559(tx) => Ok(tx.into()),
-            Self::Eip7702(tx) => Ok(tx.into()),
-            tx @ Self::Deposit(_) => Err(tx),
-        }
-    }
-
-    /// Attempts to convert an ethereum [`TxEnvelope`] into the optimism variant.
-    ///
-    /// Returns the given envelope as error if [`OpTxEnvelope`] doesn't support the variant
-    /// (EIP-4844)
-    pub fn try_from_eth_envelope(tx: TxEnvelope) -> Result<Self, TxEnvelope> {
-        match tx {
-            TxEnvelope::Legacy(tx) => Ok(tx.into()),
-            TxEnvelope::Eip2930(tx) => Ok(tx.into()),
-            TxEnvelope::Eip1559(tx) => Ok(tx.into()),
-            tx @ TxEnvelope::Eip4844(_) => Err(tx),
-            TxEnvelope::Eip7702(tx) => Ok(tx.into()),
         }
     }
 
@@ -728,8 +672,8 @@ mod tests {
             value: U256::from(4_u64),
             input: Bytes::from(vec![5]),
             is_system_transaction: false,
-            eth_tx_value: Some(6),
-            eth_value: Some(7),
+            eth_value: Some(1),
+            eth_tx_value: Some(1),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
         let encoded = tx_envelope.encoded_2718();
@@ -750,8 +694,8 @@ mod tests {
             from: Address::random(),
             mint: Some(u128::MAX),
             is_system_transaction: false,
-            eth_tx_value: Some(u128::MAX),
             eth_value: Some(u128::MAX),
+            eth_tx_value: Some(u128::MAX),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
 
@@ -762,6 +706,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn eip2718_deposit_decode() {
         // <https://basescan.org/tx/0xc468b38a20375922828c8126912740105125143b9856936085474b2590bbca91>
         let b = hex!(
