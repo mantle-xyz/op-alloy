@@ -1,10 +1,12 @@
+//! Superchain types
+
 use alloc::{
     format,
     string::{String, ToString},
 };
 use core::array::TryFromSliceError;
 
-use alloy_primitives::{B256, B64};
+use alloy_primitives::{B64, B256};
 use derive_more::derive::{Display, From};
 
 /// Superchain Signal information.
@@ -219,7 +221,7 @@ pub struct ProtocolVersionFormatV0 {
 impl core::fmt::Display for ProtocolVersionFormatV0 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let build_tag = if self.build.0.iter().any(|&byte| byte != 0) {
-            if is_human_readable_build_tag(self.build) {
+            if self.is_readable_build_tag() {
                 let full = format!("+{}", String::from_utf8_lossy(&self.build.0));
                 full.trim_end_matches('\0').to_string()
             } else {
@@ -237,6 +239,26 @@ impl core::fmt::Display for ProtocolVersionFormatV0 {
 }
 
 impl ProtocolVersionFormatV0 {
+    /// Returns true if the build tag is human-readable, false otherwise.
+    pub fn is_readable_build_tag(&self) -> bool {
+        for (i, &c) in self.build.iter().enumerate() {
+            if c == 0 {
+                // Trailing zeros are allowed
+                if self.build[i..].iter().any(|&d| d != 0) {
+                    return false;
+                }
+                return true;
+            }
+
+            // following semver.org advertised regex, alphanumeric with '-' and '.', except leading
+            // '.'.
+            if !(c.is_ascii_alphanumeric() || c == b'-' || (c == b'.' && i > 0)) {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Version-type 0 byte encoding:
     ///
     /// ```text
@@ -285,25 +307,6 @@ impl ProtocolVersionFormatV0 {
     }
 }
 
-/// Returns true if the build tag is human-readable, false otherwise.
-fn is_human_readable_build_tag(build: B64) -> bool {
-    for (i, &c) in build.iter().enumerate() {
-        if c == 0 {
-            // Trailing zeros are allowed
-            if build[i..].iter().any(|&d| d != 0) {
-                return false;
-            }
-            return true;
-        }
-
-        // following semver.org advertised regex, alphanumeric with '-' and '.', except leading '.'.
-        if !(c.is_ascii_alphanumeric() || c == b'-' || (c == b'.' && i > 0)) {
-            return false;
-        }
-    }
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use alloy_primitives::b256;
@@ -311,8 +314,64 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_protocol_version_display() {
+        assert_eq!(
+            ProtocolVersion::V0(ProtocolVersionFormatV0 {
+                build: B64::from_slice(&[0x61, 0x62, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]),
+                major: 42,
+                minor: 0,
+                patch: 2,
+                pre_release: 0,
+            })
+            .display(),
+            "v42.0.2+0x6162010000000000"
+        );
+    }
+
+    #[test]
+    fn test_protocol_version_accessors() {
+        let inner = ProtocolVersionFormatV0 {
+            build: B64::from_slice(&[0x61, 0x62, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]),
+            major: 42,
+            minor: 0,
+            patch: 2,
+            pre_release: 0,
+        };
+        let protocol_version = ProtocolVersion::V0(inner);
+
+        assert_eq!(
+            protocol_version.build(),
+            B64::from_slice(&[0x61, 0x62, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00])
+        );
+        assert_eq!(protocol_version.major(), 42);
+        assert_eq!(protocol_version.minor(), 0);
+        assert_eq!(protocol_version.patch(), 2);
+        assert_eq!(protocol_version.pre_release(), 0);
+        assert_eq!(protocol_version.inner(), inner);
+        assert_eq!(protocol_version.as_v0(), Some(inner));
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_protocol_version_serde() {
+        let raw_protocol_version = r#"
+            "0x000000000000000061620100000000000000002a000000000000000200000000"
+        "#;
+        let protocol_version = ProtocolVersion::V0(ProtocolVersionFormatV0 {
+            build: B64::from_slice(&[0x61, 0x62, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]),
+            major: 42,
+            minor: 0,
+            patch: 2,
+            pre_release: 0,
+        });
+
+        let encoded = serde_json::to_string(&protocol_version).unwrap();
+        assert_eq!(encoded, raw_protocol_version.trim());
+    }
+
+    #[test]
     fn test_protocol_version_encode_decode() {
-        let test_cases = vec![
+        let test_cases = [
             (
                 ProtocolVersion::V0(ProtocolVersionFormatV0 {
                     build: B64::from_slice(&[0x61, 0x62, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]),
@@ -390,7 +449,8 @@ mod tests {
                 "v1.0.0+beta.123",
                 b256!("0000000000000000626574612e31323300000001000000000000000000000000"),
             ),
-        ];
+        ]
+        .to_vec();
 
         for (decoded_exp, formatted_exp, encoded_exp) in test_cases {
             encode_decode_v0(encoded_exp, formatted_exp, decoded_exp);

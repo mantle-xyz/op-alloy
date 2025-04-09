@@ -3,10 +3,12 @@
 use crate::{OpDepositReceipt, OpDepositReceiptWithBloom, OpTxType};
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, TxReceipt};
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
-use alloy_eips::Typed2718;
-use alloy_primitives::{logs_bloom, Bloom, Log};
-use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
+use alloy_eips::{
+    Typed2718,
+    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
+};
+use alloy_primitives::{Bloom, Log, logs_bloom};
+use alloy_rlp::{BufMut, Decodable, Encodable, length_of_length};
 
 /// Receipt envelope, as defined in [EIP-2718], modified for OP Stack chains.
 ///
@@ -21,7 +23,6 @@ use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
-#[non_exhaustive]
 pub enum OpReceiptEnvelope<T = Log> {
     /// Receipt envelope with no type flag.
     #[cfg_attr(feature = "serde", serde(rename = "0x0", alias = "0x00"))]
@@ -103,17 +104,17 @@ impl<T> OpReceiptEnvelope<T> {
     }
 
     /// Return true if the transaction was successful.
-    pub fn is_success(&self) -> bool {
+    pub const fn is_success(&self) -> bool {
         self.status()
     }
 
     /// Returns the success status of the receipt's transaction.
-    pub fn status(&self) -> bool {
+    pub const fn status(&self) -> bool {
         self.as_receipt().unwrap().status.coerce_status()
     }
 
     /// Returns the cumulative gas used at this receipt.
-    pub fn cumulative_gas_used(&self) -> u64 {
+    pub const fn cumulative_gas_used(&self) -> u64 {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
@@ -262,7 +263,6 @@ impl Typed2718 for OpReceiptEnvelope {
 }
 
 impl Encodable2718 for OpReceiptEnvelope {
-
     fn encode_2718_len(&self) -> usize {
         self.inner_length() + !self.is_legacy() as usize
     }
@@ -307,10 +307,10 @@ where
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         match u.int_in_range(0..=4)? {
-            0 => Ok(Self::Legacy(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            1 => Ok(Self::Eip2930(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            2 => Ok(Self::Eip1559(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            _ => Ok(Self::Deposit(OpDepositReceiptWithBloom::<T>::arbitrary(u)?)),
+            0 => Ok(Self::Legacy(ReceiptWithBloom::arbitrary(u)?)),
+            1 => Ok(Self::Eip2930(ReceiptWithBloom::arbitrary(u)?)),
+            2 => Ok(Self::Eip1559(ReceiptWithBloom::arbitrary(u)?)),
+            _ => Ok(Self::Deposit(OpDepositReceiptWithBloom::arbitrary(u)?)),
         }
     }
 }
@@ -320,36 +320,41 @@ mod tests {
     use super::*;
     use alloy_consensus::{Receipt, ReceiptWithBloom};
     use alloy_eips::eip2718::Encodable2718;
-    use alloy_primitives::{address, b256, bytes, hex, Log, LogData};
+    use alloy_primitives::{Log, LogData, address, b256, bytes, hex};
     use alloy_rlp::Encodable;
 
     #[cfg(not(feature = "std"))]
-    use alloc::{vec, vec::Vec};
+    use alloc::vec;
 
     // Test vector from: https://eips.ethereum.org/EIPS/eip-2481
     #[test]
     fn encode_legacy_receipt() {
-        let expected = hex!("f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff");
+        let expected = hex!(
+            "f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff"
+        );
 
         let mut data = vec![];
-        let receipt =
-            OpReceiptEnvelope::Legacy(ReceiptWithBloom {
-                receipt: Receipt {
-                    status: false.into(),
-                    cumulative_gas_used: 0x1,
-                    logs: vec![Log {
-                        address: address!("0000000000000000000000000000000000000011"),
-                        data: LogData::new_unchecked(
-                            vec![
-                        b256!("000000000000000000000000000000000000000000000000000000000000dead"),
-                        b256!("000000000000000000000000000000000000000000000000000000000000beef"),
-                    ],
-                            bytes!("0100ff"),
-                        ),
-                    }],
-                },
-                logs_bloom: [0; 256].into(),
-            });
+        let receipt = OpReceiptEnvelope::Legacy(ReceiptWithBloom {
+            receipt: Receipt {
+                status: false.into(),
+                cumulative_gas_used: 0x1,
+                logs: vec![Log {
+                    address: address!("0000000000000000000000000000000000000011"),
+                    data: LogData::new_unchecked(
+                        vec![
+                            b256!(
+                                "000000000000000000000000000000000000000000000000000000000000dead"
+                            ),
+                            b256!(
+                                "000000000000000000000000000000000000000000000000000000000000beef"
+                            ),
+                        ],
+                        bytes!("0100ff"),
+                    ),
+                }],
+            },
+            logs_bloom: [0; 256].into(),
+        });
 
         receipt.network_encode(&mut data);
 

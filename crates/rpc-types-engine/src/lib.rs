@@ -5,21 +5,28 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![cfg_attr(not(any(test, feature = "std")), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
+pub use alloy_rpc_types_engine::ForkchoiceUpdateVersion;
+
 mod attributes;
-pub use attributes::{OpAttributesWithParent, OpPayloadAttributes};
+pub use attributes::OpPayloadAttributes;
 
 mod envelope;
-pub use envelope::{OpNetworkPayloadEnvelope, PayloadEnvelopeError, PayloadHash};
+pub use envelope::{OpExecutionData, OpNetworkPayloadEnvelope, PayloadEnvelopeError, PayloadHash};
 
-mod payload_v3;
-pub use payload_v3::OpExecutionPayloadEnvelopeV3;
+mod sidecar;
+pub use sidecar::OpExecutionPayloadSidecar;
 
-mod payload_v4;
-pub use payload_v4::OpExecutionPayloadEnvelopeV4;
+pub mod payload;
+pub use payload::{
+    OpExecutionPayload,
+    error::OpPayloadError,
+    v3::OpExecutionPayloadEnvelopeV3,
+    v4::{OpExecutionPayloadEnvelopeV4, OpExecutionPayloadV4},
+};
 
 mod superchain;
 pub use superchain::{

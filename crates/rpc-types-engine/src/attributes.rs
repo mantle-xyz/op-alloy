@@ -1,12 +1,13 @@
 //! Optimism-specific payload attributes.
 
 use alloc::vec::Vec;
-use alloy_primitives::Bytes;
+use alloy_eips::eip1559::BaseFeeParams;
+use alloy_primitives::{B64, Bytes};
 use alloy_rpc_types_engine::PayloadAttributes;
-use op_alloy_protocol::L2BlockInfo;
+use op_alloy_consensus::{EIP1559ParamError, decode_eip_1559_params, encode_holocene_extra_data};
 
 /// Optimism Payload Attributes
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct OpPayloadAttributes {
@@ -30,41 +31,36 @@ pub struct OpPayloadAttributes {
     ///
     /// Prior to Holocene activation, this field should always be [None].
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub base_fee: Option<u128>,
+    pub eip_1559_params: Option<B64>,
 }
 
-/// Optimism Payload Attributes with parent block reference.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct OpAttributesWithParent {
-    /// The payload attributes.
-    pub attributes: OpPayloadAttributes,
-    /// The parent block reference.
-    pub parent: L2BlockInfo,
-}
-
-impl OpAttributesWithParent {
-    /// Create a new [OpAttributesWithParent] instance.
-    pub const fn new(attributes: OpPayloadAttributes, parent: L2BlockInfo) -> Self {
-        Self { attributes, parent }
+impl OpPayloadAttributes {
+    /// Encodes the `eip1559` parameters for the payload.
+    pub fn get_holocene_extra_data(
+        &self,
+        default_base_fee_params: BaseFeeParams,
+    ) -> Result<Bytes, EIP1559ParamError> {
+        self.eip_1559_params
+            .map(|params| encode_holocene_extra_data(params, default_base_fee_params))
+            .ok_or(EIP1559ParamError::NoEIP1559Params)?
     }
 
-    /// Returns the payload attributes.
-    pub const fn attributes(&self) -> &OpPayloadAttributes {
-        &self.attributes
-    }
-
-    /// Returns the parent block reference.
-    pub const fn parent(&self) -> &L2BlockInfo {
-        &self.parent
+    /// Extracts the Holocene 1599 parameters from the encoded form:
+    /// <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/holocene/exec-engine.md#eip1559params-encoding>
+    ///
+    /// Returns (`elasticity`, `denominator`)
+    pub fn decode_eip_1559_params(&self) -> Option<(u32, u32)> {
+        self.eip_1559_params.map(decode_eip_1559_params)
     }
 }
 
 #[cfg(all(test, feature = "serde"))]
 mod test {
     use super::*;
-    use alloy_primitives::{b64, Address, B256};
+    use alloc::vec;
+    use alloy_primitives::{Address, B256, b64};
     use alloy_rpc_types_engine::PayloadAttributes;
+    use core::str::FromStr;
 
     #[test]
     fn test_serde_roundtrip_attributes_pre_holocene() {
@@ -79,12 +75,30 @@ mod test {
             transactions: Some(vec![b"hello".to_vec().into()]),
             no_tx_pool: Some(true),
             gas_limit: Some(42),
-            base_fee: Some(100_000),
+            eip_1559_params: None,
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();
         let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
 
         assert_eq!(attributes, de);
+    }
+
+    #[test]
+    fn test_get_extra_data_post_holocene() {
+        let attributes = OpPayloadAttributes {
+            eip_1559_params: Some(B64::from_str("0x0000000800000008").unwrap()),
+            ..Default::default()
+        };
+        let extra_data = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(extra_data.unwrap(), Bytes::copy_from_slice(&[0, 0, 0, 0, 8, 0, 0, 0, 8]));
+    }
+
+    #[test]
+    fn test_get_extra_data_post_holocene_default() {
+        let attributes =
+            OpPayloadAttributes { eip_1559_params: Some(B64::ZERO), ..Default::default() };
+        let extra_data = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(extra_data.unwrap(), Bytes::copy_from_slice(&[0, 0, 0, 0, 80, 0, 0, 0, 60]));
     }
 }

@@ -5,6 +5,430 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.11.3) - 2025-03-26
+
+### Bug Fixes
+
+- [l2-withdrawals-root] `OpExecutionPayloadEnvelopeV4` missing v4 payload ([#472](https://github.com/alloy-rs/op-alloy/issues/472))
+
+### Dependencies
+
+- Update Dependencies ([#474](https://github.com/alloy-rs/op-alloy/issues/474))
+- Bump edition ([#458](https://github.com/alloy-rs/op-alloy/issues/458))
+- Bump msrv to 1.85 ([#457](https://github.com/alloy-rs/op-alloy/issues/457))
+
+### Features
+
+- Move safety level ([#477](https://github.com/alloy-rs/op-alloy/issues/477))
+- [op-alloy-rpc-types-engine] Add `superchain` mod ([#476](https://github.com/alloy-rs/op-alloy/issues/476))
+- [rpc-types-engine] Support V4 network payload ([#471](https://github.com/alloy-rs/op-alloy/issues/471))
+- Derive hash for envelope ([#470](https://github.com/alloy-rs/op-alloy/issues/470))
+
+### Miscellaneous Tasks
+
+- Remove deposit context source ([#475](https://github.com/alloy-rs/op-alloy/issues/475))
+
+### Other
+
+- 0.11.2 ([#473](https://github.com/alloy-rs/op-alloy/issues/473))
+
+## [0.11.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.11.1) - 2025-03-12
+
+### Miscellaneous Tasks
+
+- Release 0.11.1
+- Remove associated constant from RlpEcdsaEncodableTx ([#469](https://github.com/alloy-rs/op-alloy/issues/469))
+
+## [0.11.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.11.0) - 2025-03-07
+
+### Dependencies
+
+- [deps] Alloy 0.12 ([#466](https://github.com/alloy-rs/op-alloy/issues/466))
+
+### Miscellaneous Tasks
+
+- Release 0.11.0
+- [consensus] AsRef<OpTxEnvelope> ([#464](https://github.com/alloy-rs/op-alloy/issues/464))
+
+### Other
+
+- 0.10.9 ([#465](https://github.com/alloy-rs/op-alloy/issues/465))
+
+## [0.10.8](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.8) - 2025-03-06
+
+### Bug Fixes
+
+- [engine] Empty requests hash ([#463](https://github.com/alloy-rs/op-alloy/issues/463))
+
+### Features
+
+- Add signabletx impl for typedtx ([#462](https://github.com/alloy-rs/op-alloy/issues/462))
+
+### Miscellaneous Tasks
+
+- Release 0.10.8
+
+## [0.10.7](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.7) - 2025-02-28
+
+### Dependencies
+
+- Bump msrv to 1.82 ([#459](https://github.com/alloy-rs/op-alloy/issues/459))
+
+### Miscellaneous Tasks
+
+- Release 0.10.7
+
+### Other
+
+- Remove redundant method for v4 payload ([#461](https://github.com/alloy-rs/op-alloy/issues/461))
+- Add conversions from block to payload ([#460](https://github.com/alloy-rs/op-alloy/issues/460))
+
+## [0.10.6](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.6) - 2025-02-26
+
+### Features
+
+- [l2-withdrawals-root] Add conversions for `OpExecutionData` ([#455](https://github.com/alloy-rs/op-alloy/issues/455))
+- Impl AnyRpcTransaction for OpTxEnvelope ([#454](https://github.com/alloy-rs/op-alloy/issues/454))
+- Added helpers for opExecutionData ([#451](https://github.com/alloy-rs/op-alloy/issues/451))
+
+### Miscellaneous Tasks
+
+- Release 0.10.6
+- Fix imports ([#452](https://github.com/alloy-rs/op-alloy/issues/452))
+- [consensus] Remove Hardforks ([#448](https://github.com/alloy-rs/op-alloy/issues/448))
+
+### Testing
+
+- Fix flaky bincode compat rountrip test ([#453](https://github.com/alloy-rs/op-alloy/issues/453))
+
+## [0.10.5](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.5) - 2025-02-19
+
+### Features
+
+- [l2-withdrawals] Add methods for prague payload fields to `OpExecutionPayloadSidecar` ([#445](https://github.com/alloy-rs/op-alloy/issues/445))
+
+### Miscellaneous Tasks
+
+- Release 0.10.5
+
+### Other
+
+- Add interop time to genesis ([#447](https://github.com/alloy-rs/op-alloy/issues/447))
+
+## [0.10.4](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.4) - 2025-02-19
+
+### Bug Fixes
+
+- Std leakage ([#432](https://github.com/alloy-rs/op-alloy/issues/432))
+- [consensus] Ecotone Upgrade Txs ([#412](https://github.com/alloy-rs/op-alloy/issues/412))
+- [consensus] L1BlockInfo datas ([#408](https://github.com/alloy-rs/op-alloy/issues/408))
+
+### Features
+
+- [l2-withdrawals] Add `OpPayloadError` variants for blob transactions and l1 withdrawals ([#442](https://github.com/alloy-rs/op-alloy/issues/442))
+- Add signed conversion ([#443](https://github.com/alloy-rs/op-alloy/issues/443))
+- [l2-withdrawals] Impl conversion payload + sidecar into block  ([#441](https://github.com/alloy-rs/op-alloy/issues/441))
+- Add bincode compat support for depositreceipts ([#440](https://github.com/alloy-rs/op-alloy/issues/440))
+- Add fn for signature hash ([#438](https://github.com/alloy-rs/op-alloy/issues/438))
+- Impl OpExecutionData ([#429](https://github.com/alloy-rs/op-alloy/issues/429))
+- Add tryfrom envelope conversions ([#433](https://github.com/alloy-rs/op-alloy/issues/433))
+- [l2-withdrawals] Impl conversion to block for `OpExecutionPayloadV4` ([#435](https://github.com/alloy-rs/op-alloy/issues/435))
+- Add additional compat impls ([#427](https://github.com/alloy-rs/op-alloy/issues/427))
+- Remove IsthmusPayloadFields ([#431](https://github.com/alloy-rs/op-alloy/issues/431))
+- Add is-deposit helper ([#422](https://github.com/alloy-rs/op-alloy/issues/422))
+- [isthmus] Define `OpExecutionData` ([#418](https://github.com/alloy-rs/op-alloy/issues/418))
+- Add OpExecutionPayloadV4 ([#414](https://github.com/alloy-rs/op-alloy/issues/414))
+- [isthmus] Define `IsthmusPayloadFields` ([#410](https://github.com/alloy-rs/op-alloy/issues/410))
+- [consensus] Isthmus Network Upgrade Txs ([#405](https://github.com/alloy-rs/op-alloy/issues/405))
+
+### Miscellaneous Tasks
+
+- Release 0.10.4
+- Additional envelope conversion ([#437](https://github.com/alloy-rs/op-alloy/issues/437))
+- Make test compile ([#434](https://github.com/alloy-rs/op-alloy/issues/434))
+- Rm bad non_exhaustive ([#404](https://github.com/alloy-rs/op-alloy/issues/404))
+
+### Other
+
+- Custom deserialize impl for OpExecutionPayload ([#436](https://github.com/alloy-rs/op-alloy/issues/436))
+- 0.10.3 ([#426](https://github.com/alloy-rs/op-alloy/issues/426))
+- Add operator fee to rpc l1 block ([#420](https://github.com/alloy-rs/op-alloy/issues/420))
+- Define `OpExecutionPayload` ([#416](https://github.com/alloy-rs/op-alloy/issues/416))
+- 0.10.2 ([#413](https://github.com/alloy-rs/op-alloy/issues/413))
+- 0.10.1 ([#409](https://github.com/alloy-rs/op-alloy/issues/409))
+
+## [0.10.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.10.0) - 2025-01-31
+
+### Dependencies
+
+- Bump alloy 0.11 ([#403](https://github.com/alloy-rs/op-alloy/issues/403))
+
+### Features
+
+- [ci] Add feature propagation checks ([#402](https://github.com/alloy-rs/op-alloy/issues/402))
+
+### Miscellaneous Tasks
+
+- Release 0.10.0
+- Rm execution requests from v4 payload fn ([#401](https://github.com/alloy-rs/op-alloy/issues/401))
+
+## [0.9.6](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.9.6) - 2025-01-22
+
+### Bug Fixes
+
+- Op-alloy-provider ([#390](https://github.com/alloy-rs/op-alloy/issues/390))
+
+### Dependencies
+
+- Revert maili deps ([#399](https://github.com/alloy-rs/op-alloy/issues/399))
+- Bump `maili-*` to `0.1.6` ([#393](https://github.com/alloy-rs/op-alloy/issues/393))
+- [deps] Bump `maili` to 0.1.5 ([#385](https://github.com/alloy-rs/op-alloy/issues/385))
+- Quick Version Bumps ([#362](https://github.com/alloy-rs/op-alloy/issues/362))
+
+### Features
+
+- Add flz ([#400](https://github.com/alloy-rs/op-alloy/issues/400))
+- [consensus] Add is_deposit to OpTxEnvelope ([#396](https://github.com/alloy-rs/op-alloy/issues/396))
+- [interop] Define `ExecutingMessage` wrapper ([#361](https://github.com/alloy-rs/op-alloy/issues/361))
+- [protocol] Compressors with Mocked Brotli Streaming ([#335](https://github.com/alloy-rs/op-alloy/issues/335))
+- [protocol] Interop Types ([#352](https://github.com/alloy-rs/op-alloy/issues/352))
+
+### Miscellaneous Tasks
+
+- Release 0.9.6
+- Add serde-bincode-compat for re-export features ([#397](https://github.com/alloy-rs/op-alloy/issues/397))
+- [docs] Update readme ([#392](https://github.com/alloy-rs/op-alloy/issues/392))
+- [consensus] Migrate deposit tx behaviour to `maili` ([#383](https://github.com/alloy-rs/op-alloy/issues/383))
+- [genesis] Migrate `op-alloy-genesis`->`maili-genesis` ([#381](https://github.com/alloy-rs/op-alloy/issues/381))
+- [provider] Revert [#365](https://github.com/alloy-rs/op-alloy/issues/365) remove `OpEngineApi` ([#379](https://github.com/alloy-rs/op-alloy/issues/379))
+- [consensus] Migrate deposit source to `maili-common` ([#377](https://github.com/alloy-rs/op-alloy/issues/377))
+- [rpc] Migrate rpc types to maili ([#378](https://github.com/alloy-rs/op-alloy/issues/378))
+- [docs] Remove `op-alloy-protocol` from docs ([#380](https://github.com/alloy-rs/op-alloy/issues/380))
+- [genesis] Add `interop_time` to `RollupConfig` + `HardForkConfiguration` ([#382](https://github.com/alloy-rs/op-alloy/issues/382))
+- Remove rpc-jsonrpsee Crate ([#376](https://github.com/alloy-rs/op-alloy/issues/376))
+- [protocol] Remove Protocol Crate ([#371](https://github.com/alloy-rs/op-alloy/issues/371))
+- [registry] Remove the Registry Crate ([#372](https://github.com/alloy-rs/op-alloy/issues/372))
+- [provider] Remove Provider Crate ([#373](https://github.com/alloy-rs/op-alloy/issues/373))
+- [rpc-types-engine] Migrate `op_alloy_rpc_types_engine::superchain`->`op-rs/maili-rpc-types-engine` ([#367](https://github.com/alloy-rs/op-alloy/issues/367))
+- [registry] Migrate `op-alloy-registry`->`op-rs/maili-registry` ([#366](https://github.com/alloy-rs/op-alloy/issues/366))
+- [provider] Migrate `op-alloy-provider`->`op-rs/maili-provider` ([#365](https://github.com/alloy-rs/op-alloy/issues/365))
+- [protocol] Migrate `op-alloy-protocol`->`op-rs/maili-protocol` ([#364](https://github.com/alloy-rs/op-alloy/issues/364))
+- [ci] Check wasm compilation for `op-alloy-rpc-types` in CI ([#357](https://github.com/alloy-rs/op-alloy/issues/357))
+- [ci] Update target `wasm32-wasi` to `wasm32-wasip1` for ci ([#354](https://github.com/alloy-rs/op-alloy/issues/354))
+- [rpc] `no_std` support `op-alloy-rpc-jsonrpsee` ([#356](https://github.com/alloy-rs/op-alloy/issues/356))
+
+### Other
+
+- 0.9.5 ([#394](https://github.com/alloy-rs/op-alloy/issues/394))
+- 0.9.4 ([#389](https://github.com/alloy-rs/op-alloy/issues/389))
+- 0.9.3 ([#384](https://github.com/alloy-rs/op-alloy/issues/384))
+- 0.9.2 ([#368](https://github.com/alloy-rs/op-alloy/issues/368))
+- 0.9.1 ([#363](https://github.com/alloy-rs/op-alloy/issues/363))
+- Define supervisor API ([#359](https://github.com/alloy-rs/op-alloy/issues/359))
+
+## [0.9.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.9.0) - 2024-12-30
+
+### Dependencies
+
+- Bump alloy 0.9 ([#350](https://github.com/alloy-rs/op-alloy/issues/350))
+
+### Miscellaneous Tasks
+
+- Release 0.9.0
+- Make clippy happy ([#349](https://github.com/alloy-rs/op-alloy/issues/349))
+
+## [0.8.5](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.5) - 2024-12-19
+
+### Features
+
+- Impl From<TxEip7702> for OpTypedTransaction ([#348](https://github.com/alloy-rs/op-alloy/issues/348))
+
+### Miscellaneous Tasks
+
+- Release 0.8.5
+
+### Other
+
+- [Feature] Use Upstream Forkchoice Version ([#347](https://github.com/alloy-rs/op-alloy/issues/347))
+
+## [0.8.4](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.4) - 2024-12-17
+
+### Dependencies
+
+- Bump alloy 081 ([#344](https://github.com/alloy-rs/op-alloy/issues/344))
+
+### Miscellaneous Tasks
+
+- Release 0.8.4
+
+### Other
+
+- [Bug] miner_setMaxDASize should return bool type ([#346](https://github.com/alloy-rs/op-alloy/issues/346))
+
+## [0.8.3](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.3) - 2024-12-14
+
+### Documentation
+
+- Fix docs ([#343](https://github.com/alloy-rs/op-alloy/issues/343))
+
+### Features
+
+- Add OpPooledTransaction ([#341](https://github.com/alloy-rs/op-alloy/issues/341))
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
+- Reorder impl fns ([#342](https://github.com/alloy-rs/op-alloy/issues/342))
+
+## [0.8.2](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.2) - 2024-12-12
+
+### Features
+
+- Upstream decode extradata fn ([#340](https://github.com/alloy-rs/op-alloy/issues/340))
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+
+## [0.8.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.1) - 2024-12-12
+
+### Features
+
+- Add serde for OpTxType ([#317](https://github.com/alloy-rs/op-alloy/issues/317))
+
+### Miscellaneous Tasks
+
+- Release 0.8.1
+- Reuse methods for receipt rlp ([#339](https://github.com/alloy-rs/op-alloy/issues/339))
+
+## [0.8.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.8.0) - 2024-12-10
+
+### Dependencies
+
+- Bump alloy ([#338](https://github.com/alloy-rs/op-alloy/issues/338))
+- [registry] Bump superchain-registry commit ([#336](https://github.com/alloy-rs/op-alloy/issues/336))
+- Bump alloy to 0.7.3 ([#334](https://github.com/alloy-rs/op-alloy/issues/334))
+- Enable alloy-primitives/arbitrary in dev-deps ([#329](https://github.com/alloy-rs/op-alloy/issues/329))
+
+### Features
+
+- [consensus] Tx envelope tx hash ([#324](https://github.com/alloy-rs/op-alloy/issues/324))
+- Add miner extension trait ([#325](https://github.com/alloy-rs/op-alloy/issues/325))
+- [engine] FCU Version ([#321](https://github.com/alloy-rs/op-alloy/issues/321))
+- Add typed 2718 for txtype ([#323](https://github.com/alloy-rs/op-alloy/issues/323))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0
+- [registry] Update SCR ([#327](https://github.com/alloy-rs/op-alloy/issues/327))
+
+### Other
+
+- 0.7.3 ([#333](https://github.com/alloy-rs/op-alloy/issues/333))
+- Add placeholder for isthmus time to genesis ([#331](https://github.com/alloy-rs/op-alloy/issues/331))
+- Propagate arbitrary ([#330](https://github.com/alloy-rs/op-alloy/issues/330))
+
+## [0.7.2](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.7.2) - 2024-12-02
+
+### Features
+
+- Bump alloy ([#322](https://github.com/alloy-rs/op-alloy/issues/322))
+
+### Miscellaneous Tasks
+
+- Release 0.7.2
+- Release 0.7.2
+
+## [0.7.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.7.1) - 2024-11-28
+
+### Bug Fixes
+
+- [op-alloy] Add Missing Registry Crate ([#311](https://github.com/alloy-rs/op-alloy/issues/311))
+- [protocol] Remove panic in brotli compress method ([#296](https://github.com/alloy-rs/op-alloy/issues/296))
+- [genesis] Base Fee Params ([#292](https://github.com/alloy-rs/op-alloy/issues/292))
+- Protected bits handling ([#270](https://github.com/alloy-rs/op-alloy/issues/270))
+- [book] Batch over SingleBatch ([#260](https://github.com/alloy-rs/op-alloy/issues/260))
+- [book] Getting Start Links ([#256](https://github.com/alloy-rs/op-alloy/issues/256))
+- [book] Broken Mdbook Version ([#250](https://github.com/alloy-rs/op-alloy/issues/250))
+
+### Features
+
+- Bump alloy ([#314](https://github.com/alloy-rs/op-alloy/issues/314))
+- [protocol] Compressors ([#299](https://github.com/alloy-rs/op-alloy/issues/299))
+- [book] Hardfork Change Example ([#306](https://github.com/alloy-rs/op-alloy/issues/306))
+- Introduce op-alloy-registry ([#290](https://github.com/alloy-rs/op-alloy/issues/290))
+- [genesis] Holocene Timestamps on Sepolia ([#285](https://github.com/alloy-rs/op-alloy/issues/285))
+- Add missing txtype tryfroms ([#272](https://github.com/alloy-rs/op-alloy/issues/272))
+- [protocol] Batch Reader ([#265](https://github.com/alloy-rs/op-alloy/issues/265))
+- [protocol] ZLIB Compression ([#264](https://github.com/alloy-rs/op-alloy/issues/264))
+- [protocol] Brotli Compression behind `std` ([#263](https://github.com/alloy-rs/op-alloy/issues/263))
+- [protocol] Batch Encoding ([#259](https://github.com/alloy-rs/op-alloy/issues/259))
+- Add missing OpTxType trait impls ([#258](https://github.com/alloy-rs/op-alloy/issues/258))
+- [book] Frames ([#226](https://github.com/alloy-rs/op-alloy/issues/226))
+- [book] Add Badges for Crates ([#253](https://github.com/alloy-rs/op-alloy/issues/253))
+
+### Miscellaneous Tasks
+
+- Release 0.7.1
+- [workspace] Remove Deprecated Methods ([#313](https://github.com/alloy-rs/op-alloy/issues/313))
+- Release 0.7.0
+- [registry] Dogfood Test Rollup Config ([#308](https://github.com/alloy-rs/op-alloy/issues/308))
+- [workspace] Remove Hand-rolled Display Error Impls ([#312](https://github.com/alloy-rs/op-alloy/issues/312))
+- [workspace] Touchup crate docs with badges ([#309](https://github.com/alloy-rs/op-alloy/issues/309))
+- [registry] Small Cleanup ([#307](https://github.com/alloy-rs/op-alloy/issues/307))
+- [ci] Add missing no_std crates ([#310](https://github.com/alloy-rs/op-alloy/issues/310))
+- [consensus] EIP-2718 Encoding Trait Impls ([#300](https://github.com/alloy-rs/op-alloy/issues/300))
+- [protocol] Refactor Block Info Txs ([#303](https://github.com/alloy-rs/op-alloy/issues/303))
+- [readme] Add op-alloy-registry ([#301](https://github.com/alloy-rs/op-alloy/issues/301))
+- Issue Template Update ([#304](https://github.com/alloy-rs/op-alloy/issues/304))
+- [protocol] Move and Extend Brotli Compression ([#298](https://github.com/alloy-rs/op-alloy/issues/298))
+- [ci] Run examples in CI ([#297](https://github.com/alloy-rs/op-alloy/issues/297))
+- Add default for txtype ([#295](https://github.com/alloy-rs/op-alloy/issues/295))
+- [consensus] Trait Abstracted Hardforks ([#289](https://github.com/alloy-rs/op-alloy/issues/289))
+- [genesis] Remove hardcoded configs ([#291](https://github.com/alloy-rs/op-alloy/issues/291))
+- [consensus] Cleanup Hardforks ([#288](https://github.com/alloy-rs/op-alloy/issues/288))
+- [consensus] Re-export and Hardfork Cleanup ([#274](https://github.com/alloy-rs/op-alloy/issues/274))
+- [consensus] Signature Definitions ([#281](https://github.com/alloy-rs/op-alloy/issues/281))
+- [consensus] OpTxType Conversion ([#283](https://github.com/alloy-rs/op-alloy/issues/283))
+- [protocol] Batch Transaction Mod ([#284](https://github.com/alloy-rs/op-alloy/issues/284))
+- [consensus] Move OpTxType and add tests ([#282](https://github.com/alloy-rs/op-alloy/issues/282))
+- [protocol] Cleanup Examples ([#278](https://github.com/alloy-rs/op-alloy/issues/278))
+- [op-alloy] Docs ([#277](https://github.com/alloy-rs/op-alloy/issues/277))
+- [genesis] Remove Re-exports ([#276](https://github.com/alloy-rs/op-alloy/issues/276))
+- Remove Error Impls ([#273](https://github.com/alloy-rs/op-alloy/issues/273))
+- [workspace] Use thiserror for Error Types ([#269](https://github.com/alloy-rs/op-alloy/issues/269))
+- [protocol] Remove TryFrom ([#268](https://github.com/alloy-rs/op-alloy/issues/268))
+- [protocol] Re-organizes Modules and Errors ([#261](https://github.com/alloy-rs/op-alloy/issues/261))
+- [book] Building Docs ([#257](https://github.com/alloy-rs/op-alloy/issues/257))
+- [book] Frames to Batches Example ([#232](https://github.com/alloy-rs/op-alloy/issues/232))
+- [book] Missing Sections and Enhancements ([#255](https://github.com/alloy-rs/op-alloy/issues/255))
+- [book] Touchup Introduction ([#254](https://github.com/alloy-rs/op-alloy/issues/254))
+
+### Other
+
+- 0.6.8 ([#294](https://github.com/alloy-rs/op-alloy/issues/294))
+- 0.6.7 ([#287](https://github.com/alloy-rs/op-alloy/issues/287))
+- V0.6.6 ([#271](https://github.com/alloy-rs/op-alloy/issues/271))
+
 ## [0.6.5](https://github.com/alloy-rs/op-alloy
 /releases/tag/v0.6.5) - 2024-11-12
 
@@ -19,6 +443,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.6.5
 - Add deserde test ([#248](https://github.com/alloy-rs/op-alloy/issues/248))
 
 ## [0.6.4](https://github.com/alloy-rs/op-alloy

@@ -9,18 +9,31 @@
 
 extern crate alloc;
 
+#[cfg(feature = "alloy-compat")]
+mod alloy_compat;
+
 mod receipt;
 pub use receipt::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxReceipt};
 
 mod transaction;
 pub use transaction::{
-    DepositSourceDomain, DepositSourceDomainIdentifier, DepositTransaction, L1InfoDepositSource,
-    OpTxEnvelope, OpTxType, OpTypedTransaction, TxDeposit, UpgradeDepositSource, UserDepositSource,
-    DEPOSIT_TX_TYPE_ID,
+    DEPOSIT_TX_TYPE_ID, DepositTransaction, OpPooledTransaction, OpTxEnvelope, OpTxType,
+    OpTypedTransaction, TxDeposit,
 };
+
+pub mod eip1559;
+pub use eip1559::{
+    EIP1559ParamError, decode_eip_1559_params, decode_holocene_extra_data,
+    encode_holocene_extra_data,
+};
+
+mod source;
+pub use source::*;
 
 mod block;
 pub use block::OpBlock;
+
+pub mod interop;
 
 #[cfg(feature = "serde")]
 pub use transaction::serde_deposit_tx_rpc;
@@ -34,5 +47,8 @@ pub use transaction::serde_deposit_tx_rpc;
 /// Read more: <https://github.com/bincode-org/bincode/issues/326>
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub mod serde_bincode_compat {
-    pub use super::transaction::serde_bincode_compat::TxDeposit;
+    pub use super::{
+        receipt::receipts::serde_bincode_compat::OpDepositReceipt,
+        transaction::serde_bincode_compat::TxDeposit,
+    };
 }

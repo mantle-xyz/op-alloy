@@ -1,10 +1,10 @@
-//! Types for identifying the deposit source.
+//! Classification of deposit transaction source
 
 use alloc::string::String;
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{B256, keccak256};
 
 /// Source domain identifiers for deposit transactions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 #[repr(u8)]
 pub enum DepositSourceDomainIdentifier {
     /// A user deposit source.
@@ -37,8 +37,37 @@ impl DepositSourceDomain {
     }
 }
 
+/// A deposit transaction source.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub struct UserDepositSource {
+    /// The L1 block hash.
+    pub l1_block_hash: B256,
+    /// The log index.
+    pub log_index: u64,
+}
+
+impl UserDepositSource {
+    /// Creates a new [UserDepositSource].
+    pub const fn new(l1_block_hash: B256, log_index: u64) -> Self {
+        Self { l1_block_hash, log_index }
+    }
+
+    /// Returns the source hash.
+    pub fn source_hash(&self) -> B256 {
+        let mut input = [0u8; 32 * 2];
+        input[..32].copy_from_slice(&self.l1_block_hash[..]);
+        input[32 * 2 - 8..].copy_from_slice(&self.log_index.to_be_bytes());
+        let deposit_id_hash = keccak256(input);
+        let mut domain_input = [0u8; 32 * 2];
+        let identifier_bytes: [u8; 8] = (DepositSourceDomainIdentifier::User as u64).to_be_bytes();
+        domain_input[32 - 8..32].copy_from_slice(&identifier_bytes);
+        domain_input[32..].copy_from_slice(&deposit_id_hash[..]);
+        keccak256(domain_input)
+    }
+}
+
 /// A L1 info deposit transaction source.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub struct L1InfoDepositSource {
     /// The L1 block hash.
     pub l1_block_hash: B256,
@@ -61,35 +90,6 @@ impl L1InfoDepositSource {
         let mut domain_input = [0u8; 32 * 2];
         let identifier_bytes: [u8; 8] =
             (DepositSourceDomainIdentifier::L1Info as u64).to_be_bytes();
-        domain_input[32 - 8..32].copy_from_slice(&identifier_bytes);
-        domain_input[32..].copy_from_slice(&deposit_id_hash[..]);
-        keccak256(domain_input)
-    }
-}
-
-/// A deposit transaction source.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct UserDepositSource {
-    /// The L1 block hash.
-    pub l1_block_hash: B256,
-    /// The log index.
-    pub log_index: u64,
-}
-
-impl UserDepositSource {
-    /// Creates a new [UserDepositSource].
-    pub const fn new(l1_block_hash: B256, log_index: u64) -> Self {
-        Self { l1_block_hash, log_index }
-    }
-
-    /// Returns the source hash.
-    pub fn source_hash(&self) -> B256 {
-        let mut input = [0u8; 32 * 2];
-        input[..32].copy_from_slice(&self.l1_block_hash[..]);
-        input[32 * 2 - 8..].copy_from_slice(&self.log_index.to_be_bytes());
-        let deposit_id_hash = keccak256(input);
-        let mut domain_input = [0u8; 32 * 2];
-        let identifier_bytes: [u8; 8] = (DepositSourceDomainIdentifier::User as u64).to_be_bytes();
         domain_input[32 - 8..32].copy_from_slice(&identifier_bytes);
         domain_input[32..].copy_from_slice(&deposit_id_hash[..]);
         keccak256(domain_input)

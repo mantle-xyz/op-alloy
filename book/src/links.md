@@ -3,25 +3,14 @@
 [check-no-std]: https://github.com/alloy-rs/op-alloy/blob/main/scripts/check_no_std.sh
 [contributing]: https://alloy-rs.github.io/op-alloy
 [op-alloy-crate]: https://crates.io/crates/op-alloy
+[op-alloy-ff]: https://docs.rs/crate/op-alloy/latest/features
 
 [op-alloy-consensus]: https://crates.io/crates/op-alloy-consensus
-[op-alloy-genesis]: https://crates.io/crates/op-alloy-genesis
 [op-alloy-network]: https://crates.io/crates/op-alloy-network
-[op-alloy-protocol]: https://crates.io/crates/op-alloy-protocol
 [op-alloy-provider]: https://crates.io/crates/op-alloy-provider
 [op-alloy-rpc-jsonrpsee]: https://crates.io/crates/op-alloy-rpc-jsonrpsee
 [op-alloy-rpc-types-engine]: https://crates.io/crates/op-alloy-rpc-types-engine
 [op-alloy-rpc-types]: https://crates.io/crates/op-alloy-rpc-types
-
-<!-- op-alloy-genesis -->
-
-[genesis]: https://crates.io/crates/op-alloy-genesis
-[rc]: https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/rollup/struct.RollupConfig.html
-[rcid]: https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/rollup/fn.rollup_config_from_chain_id.html
-[eip]: https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html#method.eip_1559_params
-[update]: https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html#method.update_with_receipts
-[system-config]: https://docs.rs/op-alloy-genesis/latest/op_alloy_genesis/system/struct.SystemConfig.html
-
 
 <!-- op-alloy-consensus -->
 
@@ -32,16 +21,9 @@
 [ty]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxType.html
 [envelope]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxEnvelope.html
 
-<!-- Hardforks -->
-
-[holocene]: https://specs.optimism.io/protocol/holocene/overview.html
-[hardforks]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html
-[fjord]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html#method.fjord_txs
-[ecotone]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/hardforks/struct.Hardforks.html#method.ecotone_txs
-
 <!-- OP Stack Specs -->
 
-[specs]: https://specs.optimism.io/protocol/deposits.html
+[specs]: https://specs.optimism.io
 [deposit]: https://specs.optimism.io/protocol/deposits.html
 [derivation]: https://specs.optimism.io/protocol/derivation.html
 [fp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
@@ -55,9 +37,10 @@
 
 <!-- External -->
 
+[maili]: https://github.com/op-rs/maili
 [revm]: https://github.com/bluealloy/revm
 [2718]: https://eips.ethereum.org/EIPS/eip-2718
-[cannon-rs]: https://github.com/anton-rs/cannon-rs
+[cannon-rs]: https://github.com/op-rs/cannon-rs
 [asterisc]: https://github.com/ethereum-optimism/asterisc
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-succinct]: https://github.com/succinctlabs/op-succinct
@@ -73,11 +56,11 @@
 
 <!-- Kona links -->
 
-[kona]: https://github.com/anton-rs/kona
-[book]: https://anton-rs.github.io/kona/
-[issues]: https://github.com/anton-rs/kona/issues
-[new-issue]: https://github.com/anton-rs/kona/issues/new
-[contributing]: https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md
+[kona]: https://github.com/op-rs/kona
+[book]: https://op-rs.github.io/kona/
+[issues]: https://github.com/op-rs/kona/issues
+[new-issue]: https://github.com/op-rs/kona/issues/new
+[contributing]: https://github.com/op-rs/kona/tree/main/CONTRIBUTING.md
 
 <!-- People -->
 
