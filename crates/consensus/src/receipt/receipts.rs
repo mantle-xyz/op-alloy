@@ -1,11 +1,11 @@
 //! Transaction receipt types for Optimism.
 
 use super::OpTxReceipt;
-use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, RlpDecodableReceipt, RlpEncodableReceipt, TxReceipt};
+use alloy_consensus::{
+    Eip658Value, Receipt, ReceiptWithBloom, RlpDecodableReceipt, RlpEncodableReceipt, TxReceipt,
+};
 use alloy_primitives::{Bloom, Log};
-use alloy_rlp::{length_of_length, Buf, BufMut, Decodable, Encodable, Header};
-
-use core::borrow::Borrow;
+use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header};
 
 /// Receipt containing result of transaction execution.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
@@ -130,7 +130,7 @@ where
         self.inner.cumulative_gas_used()
     }
 
-    fn logs(&self) -> &[T] {
+    fn logs(&self) -> &[Self::Log] {
         self.inner.logs()
     }
 }
@@ -172,7 +172,6 @@ impl<T: Decodable> RlpDecodableReceipt for OpDepositReceipt<T> {
     }
 }
 
-
 impl OpTxReceipt for OpDepositReceipt {
     fn deposit_nonce(&self) -> Option<u64> {
         self.deposit_nonce
@@ -191,13 +190,12 @@ impl OpTxReceipt for OpDepositReceipt {
 /// [`Sealed`]: alloy_consensus::Sealed
 pub type OpDepositReceiptWithBloom<T = Log> = ReceiptWithBloom<OpDepositReceipt<T>>;
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl<'a, T> arbitrary::Arbitrary<'a> for OpDepositReceipt<T>
 where
     T: arbitrary::Arbitrary<'a>,
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        #[cfg(not(feature = "std"))]
         use alloc::vec::Vec;
         let deposit_nonce = Option::<u64>::arbitrary(u)?;
         let deposit_receipt_version =
@@ -214,11 +212,127 @@ where
     }
 }
 
+/// Bincode-compatible [`OpDepositReceipt`] serde implementation.
+#[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
+pub(crate) mod serde_bincode_compat {
+    use alloc::{borrow::Cow, vec::Vec};
+    use alloy_consensus::Receipt;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde_with::{DeserializeAs, SerializeAs};
+
+    /// Bincode-compatible [`super::OpDepositReceipt`] serde implementation.
+    ///
+    /// Intended to use with the [`serde_with::serde_as`] macro in the following way:
+    /// ```rust
+    /// use op_alloy_consensus::{OpDepositReceipt, serde_bincode_compat};
+    /// use serde::{Deserialize, Serialize, de::DeserializeOwned};
+    /// use serde_with::serde_as;
+    ///
+    /// #[serde_as]
+    /// #[derive(Serialize, Deserialize)]
+    /// struct Data<T: Serialize + DeserializeOwned + Clone + 'static> {
+    ///     #[serde_as(as = "serde_bincode_compat::OpDepositReceipt<'_, T>")]
+    ///     receipt: OpDepositReceipt<T>,
+    /// }
+    /// ```
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct OpDepositReceipt<'a, T: Clone> {
+        logs: Cow<'a, Vec<T>>,
+        status: bool,
+        cumulative_gas_used: u64,
+        deposit_nonce: Option<u64>,
+        deposit_receipt_version: Option<u64>,
+    }
+
+    impl<'a, T: Clone> From<&'a super::OpDepositReceipt<T>> for OpDepositReceipt<'a, T> {
+        fn from(value: &'a super::OpDepositReceipt<T>) -> Self {
+            Self {
+                logs: Cow::Borrowed(&value.inner.logs),
+                // OP has no post state root variant
+                status: value.inner.status.coerce_status(),
+                cumulative_gas_used: value.inner.cumulative_gas_used,
+                deposit_nonce: value.deposit_nonce,
+                deposit_receipt_version: value.deposit_receipt_version,
+            }
+        }
+    }
+
+    impl<'a, T: Clone> From<OpDepositReceipt<'a, T>> for super::OpDepositReceipt<T> {
+        fn from(value: OpDepositReceipt<'a, T>) -> Self {
+            Self {
+                inner: Receipt {
+                    status: value.status.into(),
+                    cumulative_gas_used: value.cumulative_gas_used,
+                    logs: value.logs.into_owned(),
+                },
+                deposit_nonce: value.deposit_nonce,
+                deposit_receipt_version: value.deposit_receipt_version,
+            }
+        }
+    }
+
+    impl<T: Serialize + Clone> SerializeAs<super::OpDepositReceipt<T>> for OpDepositReceipt<'_, T> {
+        fn serialize_as<S>(
+            source: &super::OpDepositReceipt<T>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            OpDepositReceipt::<'_, T>::from(source).serialize(serializer)
+        }
+    }
+
+    impl<'de, T: Deserialize<'de> + Clone> DeserializeAs<'de, super::OpDepositReceipt<T>>
+        for OpDepositReceipt<'de, T>
+    {
+        fn deserialize_as<D>(deserializer: D) -> Result<super::OpDepositReceipt<T>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            OpDepositReceipt::<'_, T>::deserialize(deserializer).map(Into::into)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::super::{OpDepositReceipt, serde_bincode_compat};
+        use alloy_primitives::Log;
+        use arbitrary::Arbitrary;
+        use rand::Rng;
+        use serde::{Deserialize, Serialize, de::DeserializeOwned};
+        use serde_with::serde_as;
+
+        #[test]
+        fn test_tx_deposit_bincode_roundtrip() {
+            #[serde_as]
+            #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+            struct Data<T: Serialize + DeserializeOwned + Clone + 'static> {
+                #[serde_as(as = "serde_bincode_compat::OpDepositReceipt<'_,T>")]
+                transaction: OpDepositReceipt<T>,
+            }
+
+            let mut bytes = [0u8; 1024];
+            rand::rng().fill(bytes.as_mut_slice());
+            let mut data = Data {
+                transaction: OpDepositReceipt::arbitrary(&mut arbitrary::Unstructured::new(&bytes))
+                    .unwrap(),
+            };
+            // ensure we don't have an invalid poststate variant
+            data.transaction.inner.status = data.transaction.inner.status.coerce_status().into();
+
+            let encoded = bincode::serialize(&data).unwrap();
+            let decoded: Data<Log> = bincode::deserialize(&encoded).unwrap();
+            assert_eq!(decoded, data);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy_consensus::Receipt;
-    use alloy_primitives::{address, b256, bytes, hex, Bytes, Log, LogData};
+    use alloy_primitives::{Bytes, Log, LogData, address, b256, bytes, hex};
     use alloy_rlp::{Decodable, Encodable};
 
     #[cfg(not(feature = "std"))]
@@ -227,31 +341,36 @@ mod tests {
     // Test vector from: https://eips.ethereum.org/EIPS/eip-2481
     #[test]
     fn decode_legacy_receipt() {
-        let data = hex!("f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff");
+        let data = hex!(
+            "f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff"
+        );
 
         // EIP658Receipt
-        let expected =
-            OpDepositReceiptWithBloom {
-                receipt: OpDepositReceipt {
-                    inner: Receipt {
-                        status: false.into(),
-                        cumulative_gas_used: 0x1,
-                        logs: vec![Log {
-                            address: address!("0000000000000000000000000000000000000011"),
-                            data: LogData::new_unchecked(
-                                vec![
-                            b256!("000000000000000000000000000000000000000000000000000000000000dead"),
-                            b256!("000000000000000000000000000000000000000000000000000000000000beef"),
-                        ],
-                                bytes!("0100ff"),
-                            ),
-                        }],
-                    },
-                    deposit_nonce: None,
-                    deposit_receipt_version: None,
+        let expected = OpDepositReceiptWithBloom {
+            receipt: OpDepositReceipt {
+                inner: Receipt {
+                    status: false.into(),
+                    cumulative_gas_used: 0x1,
+                    logs: vec![Log {
+                        address: address!("0000000000000000000000000000000000000011"),
+                        data: LogData::new_unchecked(
+                            vec![
+                                b256!(
+                                    "000000000000000000000000000000000000000000000000000000000000dead"
+                                ),
+                                b256!(
+                                    "000000000000000000000000000000000000000000000000000000000000beef"
+                                ),
+                            ],
+                            bytes!("0100ff"),
+                        ),
+                    }],
                 },
-                logs_bloom: [0; 256].into(),
-            };
+                deposit_nonce: None,
+                deposit_receipt_version: None,
+            },
+            logs_bloom: [0; 256].into(),
+        };
 
         let receipt = OpDepositReceiptWithBloom::decode(&mut &data[..]).unwrap();
         assert_eq!(receipt, expected);
@@ -301,12 +420,18 @@ mod tests {
 
     #[test]
     fn regolith_receipt_roundtrip() {
-        let data = hex!("f9010c0182b741b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0833d3bbf");
+        let data = hex!(
+            "f9010c0182b741b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0833d3bbf"
+        );
 
         // Deposit Receipt (post-regolith)
         let expected = OpDepositReceiptWithBloom {
             receipt: OpDepositReceipt {
-                inner: Receipt { cumulative_gas_used: 46913, logs: vec![], status: true.into() },
+                inner: Receipt::<Log> {
+                    cumulative_gas_used: 46913,
+                    logs: vec![],
+                    status: true.into(),
+                },
                 deposit_nonce: Some(4012991),
                 deposit_receipt_version: None,
             },
@@ -323,12 +448,18 @@ mod tests {
 
     #[test]
     fn post_canyon_receipt_roundtrip() {
-        let data = hex!("f9010d0182b741b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0833d3bbf01");
+        let data = hex!(
+            "f9010d0182b741b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0833d3bbf01"
+        );
 
         // Deposit Receipt (post-regolith)
         let expected = OpDepositReceiptWithBloom {
             receipt: OpDepositReceipt {
-                inner: Receipt { cumulative_gas_used: 46913, logs: vec![], status: true.into() },
+                inner: Receipt::<Log> {
+                    cumulative_gas_used: 46913,
+                    logs: vec![],
+                    status: true.into(),
+                },
                 deposit_nonce: Some(4012991),
                 deposit_receipt_version: Some(1),
             },

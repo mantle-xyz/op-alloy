@@ -1,9 +1,8 @@
 //! Optimism specific types related to transactions.
-use alloy_consensus::{Transaction as _, TxEnvelope};
-use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization, Typed2718};
-use alloy_primitives::{
-    private::derive_more, Address, BlockHash, Bytes, ChainId, TxKind, B256, U256,
-};
+
+use alloy_consensus::{Transaction as _, Typed2718};
+use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization};
+use alloy_primitives::{Address, B256, BlockHash, Bytes, ChainId, TxKind, U256};
 use alloy_serde::OtherFields;
 use op_alloy_consensus::OpTxEnvelope;
 use serde::{Deserialize, Serialize};
@@ -22,6 +21,9 @@ pub struct Transaction {
     #[deref]
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<OpTxEnvelope>,
+
+    /// Nonce for deposit transactions. Only present in RPC responses.
+    pub deposit_nonce: Option<u64>,
 
     /// Deposit receipt version for deposit transactions post-canyon
     pub deposit_receipt_version: Option<u64>,
@@ -127,7 +129,6 @@ impl alloy_network_primitives::TransactionResponse for Transaction {
     fn from(&self) -> Address {
         self.inner.from()
     }
-
 }
 
 /// Optimism specific transaction fields
@@ -169,10 +170,12 @@ mod tx_serde {
     //! Helper module for serializing and deserializing OP [`Transaction`].
     //!
     //! This is needed because we might need to deserialize the `from` field into both
-    //! [`alloy_rpc_types_eth::Transaction::from`] and [`op_alloy_consensus::TxDeposit::from`].
+    //! [`alloy_consensus::transaction::Recovered::signer`] which resides in
+    //! [`alloy_rpc_types_eth::Transaction::inner`] and [`op_alloy_consensus::TxDeposit::from`].
     //!
     //! Additionaly, we need similar logic for the `gasPrice` field
     use super::*;
+    use alloy_consensus::transaction::Recovered;
     use serde::de::Error;
 
     /// Helper struct which will be flattened into the transaction and will only contain `from`
@@ -188,6 +191,13 @@ mod tx_serde {
             with = "alloy_serde::quantity::opt"
         )]
         effective_gas_price: Option<u128>,
+        #[serde(
+            default,
+            rename = "nonce",
+            skip_serializing_if = "Option::is_none",
+            with = "alloy_serde::quantity::opt"
+        )]
+        deposit_nonce: Option<u64>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -222,24 +232,28 @@ mod tx_serde {
                         block_number,
                         transaction_index,
                         effective_gas_price,
-                        from,
                     },
                 deposit_receipt_version,
+                deposit_nonce,
             } = value;
 
             // if inner transaction is a deposit, then don't serialize `from` directly
-            let from = if matches!(inner, OpTxEnvelope::Deposit(_)) { None } else { Some(from) };
+            let from = if matches!(inner.inner(), OpTxEnvelope::Deposit(_)) {
+                None
+            } else {
+                Some(inner.signer())
+            };
 
             // if inner transaction has its own `gasPrice` don't serialize it in this struct.
             let effective_gas_price = effective_gas_price.filter(|_| inner.gas_price().is_none());
 
             Self {
-                inner,
+                inner: inner.into_inner(),
                 block_hash,
                 block_number,
                 transaction_index,
                 deposit_receipt_version,
-                other: OptionalFields { from, effective_gas_price },
+                other: OptionalFields { from, effective_gas_price, deposit_nonce },
             }
         }
     }
@@ -261,24 +275,30 @@ mod tx_serde {
             // error
             let from = if let Some(from) = other.from {
                 from
-            } else if let OpTxEnvelope::Deposit(tx) = &inner {
-                tx.from
             } else {
-                return Err(serde_json::Error::custom("missing `from` field"));
+                match &inner {
+                    OpTxEnvelope::Deposit(tx) => tx.from,
+                    _ => {
+                        return Err(serde_json::Error::custom("missing `from` field"));
+                    }
+                }
             };
+
+            // Only serialize deposit_nonce if inner transaction is deposit to avoid duplicated keys
+            let deposit_nonce = other.deposit_nonce.filter(|_| inner.is_deposit());
 
             let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
 
             Ok(Self {
                 inner: alloy_rpc_types_eth::Transaction {
-                    inner,
+                    inner: Recovered::new_unchecked(inner, from),
                     block_hash,
                     block_number,
                     transaction_index,
-                    from,
                     effective_gas_price,
                 },
                 deposit_receipt_version,
+                deposit_nonce,
             })
         }
     }
@@ -292,13 +312,19 @@ mod tests {
     fn can_deserialize_deposit() {
         // cast rpc eth_getTransactionByHash
         // 0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9 --rpc-url optimism
-        let rpc_tx = r#"{"blockHash":"0x458377fd07dde6bc1b6f4b1ad86e84a22875bd511be70a591869265c7e14bf22","blockNumber":"0xa","from":"0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001","gas":"0xf4240","gasPrice":"0x0","hash":"0xca19d1e03a59837e0a00f2bf854fb6cf81dba3f141d8ac0c7a4e105e4e620d5b","input":"0x015d8eb9000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000675909a700000000000000000000000000000000000000000000000000000000291c1fa4c0b780315ec9a1c3a47c0456f4d65c0b8e48179e3c120a5d3585a1e819fedc33000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b906000000000000000000000000000000000000000000000000000000000000083400000000000000000000000000000000000000000000000000000000000f4240","nonce":"0x9","to":"0x4200000000000000000000000000000000000015","transactionIndex":"0x0","value":"0x0","type":"0x7e","v":"0x0","r":"0x0","s":"0x0","sourceHash":"0x6596e00bb0865b816b2af2050dcee3cbf50ec482d5ce645d1a7bb3c5ece3b4c4","mint":"0x0","ethValue":"0x0"}"#;
+        let rpc_tx = r#"{"blockHash":"0x9d86bb313ebeedf4f9f82bf8a19b426be656a365648a7c089b618771311db9f9","blockNumber":"0x798ad0b","hash":"0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9","transactionIndex":"0x0","type":"0x7e","nonce":"0x152ea95","input":"0x440a5e200000146b000f79c50000000000000003000000006725333f000000000141e287000000000000000000000000000000000000000000000000000000012439ee7e0000000000000000000000000000000000000000000000000000000063f363e973e96e7145ff001c81b9562cba7b6104eeb12a2bc4ab9f07c27d45cd81a986620000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985","mint":"0x0","sourceHash":"0x04e9a69416471ead93b02f0c279ab11ca0b635db5c1726a56faf22623bafde52","r":"0x0","s":"0x0","v":"0x0","yParity":"0x0","gas":"0xf4240","from":"0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001","to":"0x4200000000000000000000000000000000000015","depositReceiptVersion":"0x1","value":"0x0","gasPrice":"0x0"}"#;
 
         let tx = serde_json::from_str::<Transaction>(rpc_tx).unwrap();
 
         let OpTxEnvelope::Deposit(inner) = tx.as_ref() else {
             panic!("Expected deposit transaction");
         };
-        assert_eq!(tx.from, inner.from);
+        assert_eq!(tx.inner.inner.signer(), inner.from);
+        assert_eq!(tx.deposit_nonce, Some(22211221));
+        assert_eq!(tx.inner.effective_gas_price, Some(0));
+
+        let deserialized = serde_json::to_value(&tx).unwrap();
+        let expected = serde_json::from_str::<serde_json::Value>(rpc_tx).unwrap();
+        similar_asserts::assert_eq!(deserialized, expected);
     }
 }

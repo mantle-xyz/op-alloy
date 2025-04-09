@@ -1,5 +1,5 @@
 use alloy_network::Network;
-use alloy_primitives::{BlockHash, Bytes, B256};
+use alloy_primitives::{B256, BlockHash, Bytes};
 use alloy_provider::Provider;
 use alloy_rpc_types_engine::{
     ClientVersionV1, ExecutionPayloadBodiesV1, ExecutionPayloadEnvelopeV2, ExecutionPayloadInputV2,
@@ -8,7 +8,6 @@ use alloy_rpc_types_engine::{
 use alloy_transport::{Transport, TransportResult};
 use op_alloy_rpc_types_engine::{
     OpExecutionPayloadEnvelopeV3, OpExecutionPayloadEnvelopeV4, OpPayloadAttributes,
-    ProtocolVersion, SuperchainSignal,
 };
 
 /// Extension trait that gives access to Optimism engine API RPC methods.
@@ -20,7 +19,7 @@ use op_alloy_rpc_types_engine::{
 /// <https://specs.optimism.io/protocol/exec-engine.html#engine-api>
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-pub trait OpEngineApi<N, T>: Send + Sync {
+pub trait OpEngineApi<N, T> {
     /// Sends the given payload to the execution layer client, as specified for the Shanghai fork.
     ///
     /// See also <https://github.com/ethereum/execution-apis/blob/584905270d8ad665718058060267061ecfd79ca5/src/engine/shanghai.md#engine_newpayloadv2>
@@ -55,7 +54,6 @@ pub trait OpEngineApi<N, T>: Send + Sync {
         &self,
         payload: ExecutionPayloadV3,
         parent_beacon_block_root: B256,
-        execution_requests: Vec<Bytes>,
     ) -> TransportResult<PayloadStatus>;
 
     /// Updates the execution layer client with the given fork choice, as specified for the Shanghai
@@ -178,14 +176,6 @@ pub trait OpEngineApi<N, T>: Send + Sync {
         &self,
         capabilities: Vec<String>,
     ) -> TransportResult<Vec<String>>;
-
-    /// Signals superchain information to the Engine
-    ///
-    /// V1 signals which protocol version is recommended and required.
-    async fn signal_superchain_v1(
-        &self,
-        signal: SuperchainSignal,
-    ) -> TransportResult<ProtocolVersion>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
@@ -221,10 +211,11 @@ where
         &self,
         payload: ExecutionPayloadV3,
         parent_beacon_block_root: B256,
-        execution_requests: Vec<Bytes>,
     ) -> TransportResult<PayloadStatus> {
-        // Note: The `versioned_hashes` parameter is always an empty array for OP chains.
+        // Note: The `versioned_hashes`, `execution_requests` parameters are always an empty array
+        // for OP chains.
         let versioned_hashes: Vec<B256> = vec![];
+        let execution_requests: Vec<Bytes> = vec![];
 
         self.client()
             .request(
@@ -302,12 +293,5 @@ where
         capabilities: Vec<String>,
     ) -> TransportResult<Vec<String>> {
         self.client().request("engine_exchangeCapabilities", (capabilities,)).await
-    }
-
-    async fn signal_superchain_v1(
-        &self,
-        signal: SuperchainSignal,
-    ) -> TransportResult<ProtocolVersion> {
-        self.client().request("engine_signalSuperchainV1", (signal,)).await
     }
 }

@@ -1,19 +1,22 @@
 //! Tramsaction types for Optimism.
 
 mod deposit;
-pub use deposit::TxDeposit;
+pub use deposit::{DepositTransaction, TxDeposit};
+
+mod tx_type;
+pub use tx_type::{DEPOSIT_TX_TYPE_ID, OpTxType};
 
 mod envelope;
-pub use envelope::{OpTxEnvelope, OpTxType, DEPOSIT_TX_TYPE_ID};
+pub use envelope::OpTxEnvelope;
 
 mod typed;
 pub use typed::OpTypedTransaction;
 
-mod source;
-pub use source::{
-    DepositSourceDomain, DepositSourceDomainIdentifier, L1InfoDepositSource, UpgradeDepositSource,
-    UserDepositSource,
-};
+mod pooled;
+pub use pooled::OpPooledTransaction;
+
+#[cfg(feature = "serde")]
+pub use deposit::serde_deposit_tx_rpc;
 
 #[cfg(feature = "serde")]
 pub use deposit::serde_deposit_tx_rpc;
