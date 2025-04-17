@@ -90,10 +90,6 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Regolith hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_nonce: Option<u64>,
-    /* --------------------------------------- Regolith --------------------------------------- */
-    /// token ratio between eth and mnt
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub token_ratio: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string
@@ -185,6 +181,10 @@ pub struct L1BlockInfo {
     /// Always null prior to the Isthmus hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub operator_fee_constant: Option<u128>,
+    /* ---------------------------------------- Mantle ---------------------------------------- */
+    /// token ratio between eth and mnt
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub token_ratio: Option<u128>,
 }
 
 impl Eq for L1BlockInfo {}
@@ -265,9 +265,8 @@ mod tests {
         "l1GasPrice": "0x3ef12787",
         "l1GasUsed": "0x1177",
         "l1Fee": "0x5bf1ab43d",
-        "l1BaseFeeScalar": "0x1",
-        "l1BlobBaseFee": "0x600ab8f05e64",
-        "l1BlobBaseFeeScalar": "0x1"
+        "l1FeeScalar": "0.678",
+        "tokenRatio": "0x1"
     }"#;
 
         let receipt: OpTransactionReceipt = serde_json::from_str(s).unwrap();
@@ -316,5 +315,26 @@ mod tests {
 
         let op_fields: OpTransactionReceiptFields = serde_json::from_value(json).unwrap();
         assert_eq!(op_fields.l1_block_info.l1_fee_scalar, None);
+    }
+
+    #[test]
+    fn serialize_token_ratio() {
+        let op_fields = OpTransactionReceiptFields {
+            l1_block_info: L1BlockInfo { token_ratio: Some(1), ..Default::default() },
+            ..Default::default()
+        };
+
+        let json = serde_json::to_value(op_fields).unwrap();
+        assert_eq!(json["tokenRatio"], serde_json::Value::String("0x1".to_string()));
+    }
+
+    #[test]
+    fn deserialize_token_ratio() {
+        let json = json!({
+            "tokenRatio": "0x1"
+        });
+
+        let op_fields: OpTransactionReceiptFields = serde_json::from_value(json).unwrap();
+        assert_eq!(op_fields.l1_block_info.token_ratio, Some(1));
     }
 }
