@@ -14,8 +14,8 @@ mod alloy_compat;
 
 mod receipt;
 pub use receipt::{
-    MantleDepositReceipt, MantleDepositReceiptWithBloom, OpDepositReceipt,
-    OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxReceipt,
+    MantleTxReceipt, MantleTxReceiptWithBloom, OpDepositReceipt, OpDepositReceiptWithBloom,
+    OpReceiptEnvelope, OpTxReceipt,
 };
 
 mod transaction;

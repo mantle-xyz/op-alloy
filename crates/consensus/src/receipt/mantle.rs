@@ -1,6 +1,5 @@
 //! Transaction receipt types for Optimism.
 
-use super::OpTxReceipt;
 use alloy_consensus::{
     Eip658Value, Receipt, ReceiptWithBloom, RlpDecodableReceipt, RlpEncodableReceipt, TxReceipt,
 };
@@ -11,35 +10,11 @@ use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header};
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-pub struct MantleDepositReceipt<T = Log> {
+pub struct MantleTxReceipt<T = Log> {
     /// The inner receipt type.
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: Receipt<T>,
 
-    /// Deposit nonce for Optimism deposit transactions
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )
-    )]
-    pub deposit_nonce: Option<u64>,
-    /// Deposit receipt version for Optimism deposit transactions
-    ///
-    /// The deposit receipt version was introduced in Canyon to indicate an update to how
-    /// receipt hashes should be computed when set. The state transition process
-    /// ensures this is only set for post-Canyon deposit transactions.
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )
-    )]
-    pub deposit_receipt_version: Option<u64>,
     /// L1 base fee is the minimum price per unit of gas.
     ///
     /// Present from pre-bedrock as de facto L1 price per unit of gas. L1 base fee after Bedrock.
@@ -89,26 +64,24 @@ pub struct MantleDepositReceipt<T = Log> {
     pub token_ratio: Option<u128>,
 }
 
-impl MantleDepositReceipt {
+impl MantleTxReceipt {
     /// Calculates [`Log`]'s bloom filter. this is slow operation and
-    /// [MantleDepositReceiptWithBloom] can be used to cache this value.
+    /// [MantleTxReceiptWithBloom] can be used to cache this value.
     pub fn bloom_slow(&self) -> Bloom {
         self.inner.logs.iter().collect()
     }
 
-    /// Calculates the bloom filter for the receipt and returns the [MantleDepositReceiptWithBloom]
+    /// Calculates the bloom filter for the receipt and returns the [MantleTxReceiptWithBloom]
     /// container type.
-    pub fn with_bloom(self) -> MantleDepositReceiptWithBloom {
+    pub fn with_bloom(self) -> MantleTxReceiptWithBloom {
         self.into()
     }
 }
 
-impl<T: Encodable> MantleDepositReceipt<T> {
+impl<T: Encodable> MantleTxReceipt<T> {
     /// Returns length of RLP-encoded receipt fields with the given [`Bloom`] without an RLP header.
     pub fn rlp_encoded_fields_length_with_bloom(&self, bloom: &Bloom) -> usize {
         self.inner.rlp_encoded_fields_length_with_bloom(bloom)
-            + self.deposit_nonce.map_or(0, |nonce| nonce.length())
-            + self.deposit_receipt_version.map_or(0, |version| version.length())
             + self.l1_gas_price.map_or(0, |price| price.length())
             + self.l1_gas_used.map_or(0, |used| used.length())
             + self.l1_fee.map_or(0, |fee| fee.length())
@@ -119,12 +92,6 @@ impl<T: Encodable> MantleDepositReceipt<T> {
     pub fn rlp_encode_fields_with_bloom(&self, bloom: &Bloom, out: &mut dyn BufMut) {
         self.inner.rlp_encode_fields_with_bloom(bloom, out);
 
-        if let Some(nonce) = self.deposit_nonce {
-            nonce.encode(out);
-        }
-        if let Some(version) = self.deposit_receipt_version {
-            version.encode(out);
-        }
         if let Some(price) = self.l1_gas_price {
             price.encode(out);
         }
@@ -145,7 +112,7 @@ impl<T: Encodable> MantleDepositReceipt<T> {
     }
 }
 
-impl<T: Decodable> MantleDepositReceipt<T> {
+impl<T: Decodable> MantleTxReceipt<T> {
     /// RLP-decodes receipt's field with a [`Bloom`].
     ///
     /// Does not expect an RLP header.
@@ -155,9 +122,6 @@ impl<T: Decodable> MantleDepositReceipt<T> {
         let ReceiptWithBloom { receipt: inner, logs_bloom } =
             Receipt::rlp_decode_fields_with_bloom(buf)?;
 
-        let deposit_nonce = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
-        let deposit_receipt_version =
-            (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
         let l1_gas_price = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
         let l1_gas_used = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
         let l1_fee = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
@@ -167,8 +131,6 @@ impl<T: Decodable> MantleDepositReceipt<T> {
             logs_bloom,
             receipt: Self {
                 inner,
-                deposit_nonce,
-                deposit_receipt_version,
                 l1_gas_price,
                 l1_gas_used,
                 l1_fee,
@@ -178,13 +140,13 @@ impl<T: Decodable> MantleDepositReceipt<T> {
     }
 }
 
-impl<T> AsRef<Receipt<T>> for MantleDepositReceipt<T> {
+impl<T> AsRef<Receipt<T>> for MantleTxReceipt<T> {
     fn as_ref(&self) -> &Receipt<T> {
         &self.inner
     }
 }
 
-impl<T> TxReceipt for MantleDepositReceipt<T>
+impl<T> TxReceipt for MantleTxReceipt<T>
 where
     T: AsRef<Log> + Clone + core::fmt::Debug + PartialEq + Eq + Send + Sync,
 {
@@ -211,7 +173,7 @@ where
     }
 }
 
-impl<T: Encodable> RlpEncodableReceipt for MantleDepositReceipt<T> {
+impl<T: Encodable> RlpEncodableReceipt for MantleTxReceipt<T> {
     fn rlp_encoded_length_with_bloom(&self, bloom: &Bloom) -> usize {
         self.rlp_header_with_bloom(bloom).length_with_payload()
     }
@@ -222,7 +184,7 @@ impl<T: Encodable> RlpEncodableReceipt for MantleDepositReceipt<T> {
     }
 }
 
-impl<T: Decodable> RlpDecodableReceipt for MantleDepositReceipt<T> {
+impl<T: Decodable> RlpDecodableReceipt for MantleTxReceipt<T> {
     fn rlp_decode_with_bloom(buf: &mut &[u8]) -> alloy_rlp::Result<ReceiptWithBloom<Self>> {
         let header = Header::decode(buf)?;
         if !header.list {
@@ -248,34 +210,22 @@ impl<T: Decodable> RlpDecodableReceipt for MantleDepositReceipt<T> {
     }
 }
 
-impl OpTxReceipt for MantleDepositReceipt {
-    fn deposit_nonce(&self) -> Option<u64> {
-        self.deposit_nonce
-    }
 
-    fn deposit_receipt_version(&self) -> Option<u64> {
-        self.deposit_receipt_version
-    }
-}
-
-/// [`MantleDepositReceipt`] with calculated bloom filter, modified for the OP Stack.
+/// [`MantleTxReceipt`] with calculated bloom filter, modified for the OP Stack.
 ///
 /// This convenience type allows us to lazily calculate the bloom filter for a
 /// receipt, similar to [`Sealed`].
 ///
 /// [`Sealed`]: alloy_consensus::Sealed
-pub type MantleDepositReceiptWithBloom<T = Log> = ReceiptWithBloom<MantleDepositReceipt<T>>;
+pub type MantleTxReceiptWithBloom<T = Log> = ReceiptWithBloom<MantleTxReceipt<T>>;
 
 #[cfg(feature = "arbitrary")]
-impl<'a, T> arbitrary::Arbitrary<'a> for MantleDepositReceipt<T>
+impl<'a, T> arbitrary::Arbitrary<'a> for MantleTxReceipt<T>
 where
     T: arbitrary::Arbitrary<'a>,
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         use alloc::vec::Vec;
-        let deposit_nonce = Option::<u64>::arbitrary(u)?;
-        let deposit_receipt_version =
-            deposit_nonce.is_some().then(|| u64::arbitrary(u)).transpose()?;
         let l1_gas_price = Option::<u128>::arbitrary(u)?;
         let l1_gas_used = Option::<u128>::arbitrary(u)?;
         let l1_fee = Option::<u128>::arbitrary(u)?;
@@ -287,8 +237,6 @@ where
                 cumulative_gas_used: u64::arbitrary(u)?,
                 logs: Vec::<T>::arbitrary(u)?,
             },
-            deposit_nonce,
-            deposit_receipt_version,
             l1_gas_price,
             l1_gas_used,
             l1_fee,
@@ -297,7 +245,7 @@ where
     }
 }
 
-/// Bincode-compatible [`MantleDepositReceipt`] serde implementation.
+/// Bincode-compatible [`MantleTxReceipt`] serde implementation.
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub(crate) mod serde_bincode_compat {
     use alloc::{borrow::Cow, vec::Vec};
@@ -305,43 +253,38 @@ pub(crate) mod serde_bincode_compat {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use serde_with::{DeserializeAs, SerializeAs};
 
-    /// Bincode-compatible [`super::MantleDepositReceipt`] serde implementation.
+    /// Bincode-compatible [`super::MantleTxReceipt`] serde implementation.
     ///
     /// Intended to use with the [`serde_with::serde_as`] macro in the following way:
     /// ```rust
-    /// use op_alloy_consensus::{serde_bincode_compat, MantleDepositReceipt};
+    /// use op_alloy_consensus::{serde_bincode_compat, MantleTxReceipt};
     /// use serde::{de::DeserializeOwned, Deserialize, Serialize};
     /// use serde_with::serde_as;
     ///
     /// #[serde_as]
     /// #[derive(Serialize, Deserialize)]
     /// struct Data<T: Serialize + DeserializeOwned + Clone + 'static> {
-    ///     #[serde_as(as = "serde_bincode_compat::MantleDepositReceipt<'_, T>")]
-    ///     receipt: MantleDepositReceipt<T>,
+    ///     #[serde_as(as = "serde_bincode_compat::MantleTxReceipt<'_, T>")]
+    ///     receipt: MantleTxReceipt<T>,
     /// }
     /// ```
     #[derive(Debug, Serialize, Deserialize)]
-    pub struct MantleDepositReceipt<'a, T: Clone> {
+    pub struct MantleTxReceipt<'a, T: Clone> {
         logs: Cow<'a, Vec<T>>,
         status: bool,
         cumulative_gas_used: u64,
-        deposit_nonce: Option<u64>,
-        deposit_receipt_version: Option<u64>,
         l1_gas_price: Option<u128>,
         l1_gas_used: Option<u128>,
         l1_fee: Option<u128>,
         token_ratio: Option<u128>,
     }
 
-    impl<'a, T: Clone> From<&'a super::MantleDepositReceipt<T>> for MantleDepositReceipt<'a, T> {
-        fn from(value: &'a super::MantleDepositReceipt<T>) -> Self {
+    impl<'a, T: Clone> From<&'a super::MantleTxReceipt<T>> for MantleTxReceipt<'a, T> {
+        fn from(value: &'a super::MantleTxReceipt<T>) -> Self {
             Self {
                 logs: Cow::Borrowed(&value.inner.logs),
-                // OP has no post state root variant
                 status: value.inner.status.coerce_status(),
                 cumulative_gas_used: value.inner.cumulative_gas_used,
-                deposit_nonce: value.deposit_nonce,
-                deposit_receipt_version: value.deposit_receipt_version,
                 l1_gas_price: value.l1_gas_price,
                 l1_gas_used: value.l1_gas_used,
                 l1_fee: value.l1_fee,
@@ -350,16 +293,14 @@ pub(crate) mod serde_bincode_compat {
         }
     }
 
-    impl<'a, T: Clone> From<MantleDepositReceipt<'a, T>> for super::MantleDepositReceipt<T> {
-        fn from(value: MantleDepositReceipt<'a, T>) -> Self {
+    impl<'a, T: Clone> From<MantleTxReceipt<'a, T>> for super::MantleTxReceipt<T> {
+        fn from(value: MantleTxReceipt<'a, T>) -> Self {
             Self {
                 inner: Receipt {
                     status: value.status.into(),
                     cumulative_gas_used: value.cumulative_gas_used,
                     logs: value.logs.into_owned(),
                 },
-                deposit_nonce: value.deposit_nonce,
-                deposit_receipt_version: value.deposit_receipt_version,
                 l1_gas_price: value.l1_gas_price,
                 l1_gas_used: value.l1_gas_used,
                 l1_fee: value.l1_fee,
@@ -368,33 +309,33 @@ pub(crate) mod serde_bincode_compat {
         }
     }
 
-    impl<T: Serialize + Clone> SerializeAs<super::MantleDepositReceipt<T>>
-        for MantleDepositReceipt<'_, T>
+    impl<T: Serialize + Clone> SerializeAs<super::MantleTxReceipt<T>>
+        for MantleTxReceipt<'_, T>
     {
         fn serialize_as<S>(
-            source: &super::MantleDepositReceipt<T>,
+            source: &super::MantleTxReceipt<T>,
             serializer: S,
         ) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            MantleDepositReceipt::<'_, T>::from(source).serialize(serializer)
+            MantleTxReceipt::<'_, T>::from(source).serialize(serializer)
         }
     }
 
-    impl<'de, T: Deserialize<'de> + Clone> DeserializeAs<'de, super::MantleDepositReceipt<T>>
-        for MantleDepositReceipt<'de, T>
+    impl<'de, T: Deserialize<'de> + Clone> DeserializeAs<'de, super::MantleTxReceipt<T>>
+        for MantleTxReceipt<'de, T>
     {
-        fn deserialize_as<D>(deserializer: D) -> Result<super::MantleDepositReceipt<T>, D::Error>
+        fn deserialize_as<D>(deserializer: D) -> Result<super::MantleTxReceipt<T>, D::Error>
         where
             D: Deserializer<'de>,
         {
-            MantleDepositReceipt::<'_, T>::deserialize(deserializer).map(Into::into)
+            MantleTxReceipt::<'_, T>::deserialize(deserializer).map(Into::into)
         }
     }
     #[cfg(test)]
     mod tests {
-        use super::super::{serde_bincode_compat, MantleDepositReceipt};
+        use super::super::{serde_bincode_compat, MantleTxReceipt};
         use alloy_primitives::Log;
         use arbitrary::Arbitrary;
         use rand::Rng;
@@ -402,18 +343,18 @@ pub(crate) mod serde_bincode_compat {
         use serde_with::serde_as;
 
         #[test]
-        fn test_tx_deposit_bincode_roundtrip() {
+        fn test_tx_bincode_roundtrip() {
             #[serde_as]
             #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
             struct Data<T: Serialize + DeserializeOwned + Clone + 'static> {
-                #[serde_as(as = "serde_bincode_compat::MantleDepositReceipt<'_,T>")]
-                transaction: MantleDepositReceipt<T>,
+                #[serde_as(as = "serde_bincode_compat::MantleTxReceipt<'_,T>")]
+                transaction: MantleTxReceipt<T>,
             }
 
             let mut bytes = [0u8; 1024];
             rand::thread_rng().fill(bytes.as_mut_slice());
             let data = Data {
-                transaction: MantleDepositReceipt::arbitrary(&mut arbitrary::Unstructured::new(
+                transaction: MantleTxReceipt::arbitrary(&mut arbitrary::Unstructured::new(
                     &bytes,
                 ))
                 .unwrap(),
