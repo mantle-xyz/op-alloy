@@ -13,7 +13,10 @@ extern crate alloc;
 mod alloy_compat;
 
 mod receipt;
-pub use receipt::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxReceipt};
+pub use receipt::{
+    MantleTxStoredReceipt, MantleTxStoredReceiptWithBloom, OpDepositReceipt, OpDepositReceiptWithBloom,
+    OpReceiptEnvelope, OpTxReceipt,
+};
 
 mod transaction;
 pub use transaction::{
