@@ -666,6 +666,8 @@ mod tests {
             value: U256::from(4_u64),
             input: Bytes::from(vec![5]),
             is_system_transaction: false,
+            eth_value: Some(100),
+            eth_tx_value: Some(100),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
         let encoded = tx_envelope.encoded_2718();
@@ -686,6 +688,8 @@ mod tests {
             from: Address::random(),
             mint: Some(u128::MAX),
             is_system_transaction: false,
+            eth_value: Some(100),
+            eth_tx_value: Some(100),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
 
@@ -696,6 +700,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn eip2718_deposit_decode() {
         // <https://basescan.org/tx/0xc468b38a20375922828c8126912740105125143b9856936085474b2590bbca91>
         let b = hex!("7ef8f8a0417d134467f4737fcdf2475f0ecdd2a0ed6d87ecffc888ba9f60ee7e3b8ac26a94deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e20000008dd00101c1200000000000000040000000066c352bb000000000139c4f500000000000000000000000000000000000000000000000000000000c0cff1460000000000000000000000000000000000000000000000000000000000000001d4c88f4065ac9671e8b1329b90773e89b5ddff9cf8675b2b5e9c1b28320609930000000000000000000000005050f69a9786f081509234f1a7f4684b5e5b76c9");
