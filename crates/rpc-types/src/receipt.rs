@@ -96,6 +96,9 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Canyon hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_receipt_version: Option<u64>,
+    /// Token ratio between eth and mnt
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub token_ratio: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string
@@ -230,6 +233,7 @@ impl From<OpTransactionReceipt> for OpReceiptEnvelope<alloy_primitives::Log> {
                         },
                         deposit_nonce: receipt.deposit_nonce,
                         deposit_receipt_version: receipt.deposit_receipt_version,
+                        token_ratio: receipt.token_ratio,
                     },
                     logs_bloom,
                 };

@@ -58,6 +58,7 @@ impl OpReceiptEnvelope<Log> {
         tx_type: OpTxType,
         deposit_nonce: Option<u64>,
         deposit_receipt_version: Option<u64>,
+        token_ratio: Option<u128>,
     ) -> Self {
         let logs = logs.into_iter().cloned().collect::<Vec<_>>();
         let logs_bloom = logs_bloom(&logs);
@@ -82,6 +83,7 @@ impl OpReceiptEnvelope<Log> {
                         inner: inner_receipt,
                         deposit_nonce,
                         deposit_receipt_version,
+                        token_ratio,
                     },
                     logs_bloom,
                 };
@@ -158,6 +160,11 @@ impl<T> OpReceiptEnvelope<T> {
             Self::Deposit(t) => Some(&t.receipt),
             _ => None,
         }
+    }
+
+    /// Returns the token ratio if it is a deposit receipt.
+    pub fn token_ratio(&self) -> Option<u128> {
+        self.as_deposit_receipt().and_then(|r| r.token_ratio)
     }
 
     /// Return the inner receipt. Currently this is infallible, however, future
@@ -372,22 +379,24 @@ mod tests {
     #[test]
     fn legacy_receipt_from_parts() {
         let receipt =
-            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Legacy, None, None);
+            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Legacy, None, None, None);
         assert!(receipt.status());
         assert_eq!(receipt.cumulative_gas_used(), 100);
         assert_eq!(receipt.logs().len(), 0);
         assert_eq!(receipt.tx_type(), OpTxType::Legacy);
+        assert_eq!(receipt.token_ratio(), None);
     }
 
     #[test]
     fn deposit_receipt_from_parts() {
         let receipt =
-            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Deposit, Some(1), Some(2));
+            OpReceiptEnvelope::from_parts(true, 100, vec![], OpTxType::Deposit, Some(1), Some(2), None);
         assert!(receipt.status());
         assert_eq!(receipt.cumulative_gas_used(), 100);
         assert_eq!(receipt.logs().len(), 0);
         assert_eq!(receipt.tx_type(), OpTxType::Deposit);
         assert_eq!(receipt.deposit_nonce(), Some(1));
         assert_eq!(receipt.deposit_receipt_version(), Some(2));
+        assert_eq!(receipt.token_ratio(), None);
     }
 }
