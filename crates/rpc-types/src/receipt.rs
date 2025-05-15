@@ -233,7 +233,6 @@ impl From<OpTransactionReceipt> for OpReceiptEnvelope<alloy_primitives::Log> {
                         },
                         deposit_nonce: receipt.deposit_nonce,
                         deposit_receipt_version: receipt.deposit_receipt_version,
-                        token_ratio: receipt.token_ratio,
                     },
                     logs_bloom,
                 };

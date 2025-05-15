@@ -39,16 +39,6 @@ pub struct OpDepositReceipt<T = Log> {
         )
     )]
     pub deposit_receipt_version: Option<u64>,
-    /// Token ratio between eth and mnt
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )
-    )]
-    pub token_ratio: Option<u128>,
 }
 
 impl OpDepositReceipt {
@@ -104,11 +94,10 @@ impl<T: Decodable> OpDepositReceipt<T> {
         let deposit_nonce = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
         let deposit_receipt_version =
             (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
-        let token_ratio = (!buf.is_empty()).then(|| Decodable::decode(buf)).transpose()?;
 
         Ok(ReceiptWithBloom {
             logs_bloom,
-            receipt: Self { inner, deposit_nonce, deposit_receipt_version, token_ratio },
+            receipt: Self { inner, deposit_nonce, deposit_receipt_version },
         })
     }
 }
@@ -253,7 +242,6 @@ pub(crate) mod serde_bincode_compat {
         cumulative_gas_used: u64,
         deposit_nonce: Option<u64>,
         deposit_receipt_version: Option<u64>,
-        token_ratio: Option<u128>,
     }
 
     impl<'a, T: Clone> From<&'a super::OpDepositReceipt<T>> for OpDepositReceipt<'a, T> {
@@ -265,7 +253,6 @@ pub(crate) mod serde_bincode_compat {
                 cumulative_gas_used: value.inner.cumulative_gas_used,
                 deposit_nonce: value.deposit_nonce,
                 deposit_receipt_version: value.deposit_receipt_version,
-                token_ratio: value.token_ratio,
             }
         }
     }
@@ -280,7 +267,6 @@ pub(crate) mod serde_bincode_compat {
                 },
                 deposit_nonce: value.deposit_nonce,
                 deposit_receipt_version: value.deposit_receipt_version,
-                token_ratio: value.token_ratio,
             }
         }
     }
@@ -386,7 +372,6 @@ mod tests {
                 },
                 deposit_nonce: None,
                 deposit_receipt_version: None,
-                token_ratio: None,
             },
             logs_bloom: [0; 256].into(),
         };
@@ -424,7 +409,6 @@ mod tests {
             },
             deposit_nonce: None,
             deposit_receipt_version: None,
-            token_ratio: None,
         }
         .with_bloom();
 
@@ -454,7 +438,6 @@ mod tests {
                 },
                 deposit_nonce: Some(4012991),
                 deposit_receipt_version: None,
-                token_ratio: None,
             },
             logs_bloom: [0; 256].into(),
         };
@@ -483,7 +466,6 @@ mod tests {
                 },
                 deposit_nonce: Some(4012991),
                 deposit_receipt_version: Some(1),
-                token_ratio: None,
             },
             logs_bloom: [0; 256].into(),
         };
