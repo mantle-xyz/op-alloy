@@ -59,7 +59,7 @@ pub struct TxDeposit {
     /// msg.To.
     #[cfg_attr(
         feature = "serde",
-        serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue")
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue", skip_serializing_if = "Option::is_none")
     )]
     pub eth_tx_value: Option<u128>,
 }
@@ -671,6 +671,7 @@ pub(super) mod serde_bincode_compat {
         is_system_transaction: bool,
         #[serde(default)]
         eth_value: Option<u128>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         eth_tx_value: Option<u128>,
         input: Cow<'a, Bytes>,
     }

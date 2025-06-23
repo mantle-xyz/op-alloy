@@ -149,6 +149,7 @@ pub struct OpTransactionFields {
     /// Deposit receipt version for deposit transactions post-canyon
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_receipt_version: Option<u64>,
+    /// The ETH value to mint on L2
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub eth_value: Option<u128>,
     /// The ETH value which send to to_account on L2
