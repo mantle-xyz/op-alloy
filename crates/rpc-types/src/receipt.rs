@@ -96,9 +96,6 @@ pub struct OpTransactionReceiptFields {
     /// Always null prior to the Canyon hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub deposit_receipt_version: Option<u64>,
-    /// Token ratio between eth and mnt
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
-    pub token_ratio: Option<u128>,
 }
 
 /// Serialize/Deserialize l1FeeScalar to/from string
@@ -190,6 +187,9 @@ pub struct L1BlockInfo {
     /// Always null prior to the Isthmus hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub operator_fee_constant: Option<u128>,
+    /// Token ratio between eth and mnt
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub token_ratio: Option<u128>,
 }
 
 impl Eq for L1BlockInfo {}
