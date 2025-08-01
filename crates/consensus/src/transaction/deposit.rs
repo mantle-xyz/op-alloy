@@ -117,10 +117,15 @@ impl TxDeposit {
             return Ok(None);
         }
 
-        // Try to decode a u128 value. If it fails, the field was omitted.
-        // This is safe because if the field was omitted, there should be no more data
-        // or the next field should not be a valid u128.
-        Decodable::decode(buf).map_or(Ok(None), |value| Ok(Some(value)))
+        // Check the first byte to determine if it's a valid u128 value
+        // If first byte <= 0x7f (127), it represents a single-byte integer
+        // If first byte is in range 0x80-0xa0, it represents a multi-byte integer (max 32 bytes)
+        // If first byte > 0xa0, it's not a valid u128 encoding, indicating the field was omitted
+        if *buf.first().ok_or(DecodeError::InputTooShort)? <= 0xa0 {
+            return Ok(Some(Decodable::decode(buf)?));
+        }
+
+        Ok(None)
     }
 
     /// Decodes the transaction from RLP bytes.
@@ -685,6 +690,7 @@ mod tests {
 
             let mut buffer = BytesMut::new();
             tx_deposit.rlp_encode_fields(&mut buffer);
+            println!("buffer: {:x?}", buffer.as_ref());
             let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
 
             assert_eq!(tx_deposit, decoded);
@@ -727,6 +733,11 @@ mod tests {
 
         // Test list data (invalid for u128)
         let mut buf = &[0xc1, 0x80][..]; // RLP encoding of [0] (list, invalid for u128)
+        let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
+        assert_eq!(result, Ok(None)); // Should return None for list data
+
+        // Test list data (invalid for u128)
+        let mut buf = &[0xf8, 0x8c, 0x81, 0x97, 0x84][..]; // RLP encoding of [0] (list, invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
         assert_eq!(result, Ok(None)); // Should return None for list data
     }
