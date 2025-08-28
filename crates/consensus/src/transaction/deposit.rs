@@ -111,7 +111,16 @@ impl TxDeposit {
         if buf.is_empty() {
             return Ok(None);
         }
-        Self::decode_u128_from_rlp(buf)
+        
+        // Check the first byte to determine if it's a valid u128 value
+        // If first byte <= 0x7f (127), it represents a single-byte integer
+        // If first byte is in range 0x80-0xa0, it represents a multi-byte integer (max 32 bytes)
+        // If first byte > 0xa0, it's not a valid u128 encoding, indicating the field was omitted
+        if *buf.first().ok_or(DecodeError::InputTooShort)? <= 0xa0 {
+            return Ok(Some(Decodable::decode(buf)?));
+        }
+
+        Ok(None)
     }
 
     /// Decodes the transaction from RLP bytes.
