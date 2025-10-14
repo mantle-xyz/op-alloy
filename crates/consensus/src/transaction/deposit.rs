@@ -59,12 +59,7 @@ pub struct TxDeposit {
     /// msg.To.
     #[cfg_attr(
         feature = "serde",
-        serde(
-            default,
-            with = "alloy_serde::quantity::opt",
-            rename = "ethTxValue",
-            skip_serializing_if = "Option::is_none"
-        )
+        serde(default, with = "alloy_serde::quantity::opt", rename = "ethTxValue", skip_serializing_if = "Option::is_none")
     )]
     pub eth_tx_value: Option<u128>,
 }
@@ -113,6 +108,7 @@ impl TxDeposit {
     /// Decodes a u128 value from RLP format. If the value doesn't exist, the field will be omitted
     /// from encoding.
     pub fn decode_optional_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
+        println!("buf: {:x?}", buf);
         if buf.is_empty() {
             return Ok(None);
         }
