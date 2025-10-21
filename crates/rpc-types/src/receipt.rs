@@ -194,6 +194,9 @@ pub struct L1BlockInfo {
     /// Always null prior to the Jovian hardfork.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub da_footprint_gas_scalar: Option<u16>,
+    /// Token ratio between eth and mnt
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
+    pub token_ratio: Option<u128>,
 }
 
 impl Eq for L1BlockInfo {}
