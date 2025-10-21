@@ -8,7 +8,7 @@ use alloy_eips::{
     eip2930::AccessList,
 };
 use alloy_primitives::{Address, B256, Bytes, ChainId, Signature, TxHash, TxKind, U256, keccak256};
-use alloy_rlp::{BufMut, Decodable, Encodable, Header};
+use alloy_rlp::{BufMut, Decodable, Encodable, Error as DecodeError, Header};
 use core::mem;
 
 /// Deposit transactions, also known as deposits are initiated on L1, and executed on L2.
@@ -47,9 +47,9 @@ pub struct TxDeposit {
     ///EthValue means L2 BVM_ETH mint tag, nil means that there is no need to mint BVM_ETH.
     #[cfg_attr(
         feature = "serde",
-        serde(default, with = "alloy_serde::quantity::opt", rename = "ethValue")
+        serde(default, with = "alloy_serde::quantity", rename = "ethValue")
     )]
-    pub eth_value: Option<u128>,
+    pub eth_value: u128,
     /// Input has two uses depending if transaction is Create or Call (if `to` field is None or
     /// Some).
     pub input: Bytes,
@@ -88,24 +88,14 @@ impl TxDeposit {
             source_hash: Decodable::decode(buf)?,
             from: Decodable::decode(buf)?,
             to: Decodable::decode(buf)?,
-            mint: Self::decode_u128_from_rlp(buf)?,
+            mint: Decodable::decode(buf)?,
             value: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             is_system_transaction: Decodable::decode(buf)?,
-            eth_value: Self::decode_u128_from_rlp(buf)?,
+            eth_value: Decodable::decode(buf)?,
             input: Decodable::decode(buf)?,
             eth_tx_value: Self::decode_optional_u128_from_rlp(buf)?,
         })
-    }
-
-    /// Decodes a u128 value from RLP format. If the value doesn't exist, returns nil.
-    pub fn decode_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
-        if *buf.first().ok_or(DecodeError::InputTooShort)? == EMPTY_STRING_CODE {
-            buf.advance(1);
-            Ok(None)
-        } else {
-            Ok(Some(Decodable::decode(buf)?))
-        }
     }
 
     /// Decodes a u128 value from RLP format. If the value doesn't exist, the field will be omitted
@@ -158,7 +148,7 @@ impl TxDeposit {
             + self.gas_limit.length()
             + self.is_system_transaction.length()
             + self.input.0.length()
-            + self.eth_value.map_or(1, |eth_value| eth_value.length())
+            + self.eth_value.length()
             + self.eth_tx_value.map_or(0, |eth_tx_value| eth_tx_value.length())
     }
 
@@ -172,11 +162,7 @@ impl TxDeposit {
         self.value.encode(out);
         self.gas_limit.encode(out);
         self.is_system_transaction.encode(out);
-        if let Some(eth_value) = self.eth_value {
-            eth_value.encode(out);
-        } else {
-            out.put_u8(EMPTY_STRING_CODE);
-        }
+        self.eth_value.encode(out);
         self.input.encode(out);
         if let Some(eth_tx_value) = self.eth_tx_value {
             eth_tx_value.encode(out);
@@ -404,6 +390,7 @@ impl From<TxDeposit> for alloy_rpc_types_eth::TransactionRequest {
             gas_limit,
             is_system_transaction: _,
             input,
+            ..
         } = tx;
 
         Self {
@@ -495,7 +482,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -515,7 +502,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: false,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -536,7 +523,7 @@ mod tests {
             gas_limit: 100000,
             is_system_transaction: false,
             input: Bytes::from_static(&[1, 2, 3]),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -569,7 +556,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -591,7 +578,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -615,7 +602,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -633,7 +620,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -657,7 +644,7 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
 
@@ -674,12 +661,13 @@ mod tests {
             source_hash: B256::default(),
             from: Address::default(),
             to: TxKind::default(),
-            mint: Some(100),
+            mint: 100,
             value: U256::default(),
             gas_limit: 50000,
             is_system_transaction: true,
-            input: Bytes::from_static(&[1, 2, 3]), // cannot be empty otherwise the rlp_decode_fields will fail
-            eth_value: Some(100),
+            input: Bytes::from_static(&[1, 2, 3]), /* cannot be empty otherwise the
+                                                    * rlp_decode_fields will fail */
+            eth_value: 100,
             eth_tx_value: None, // This field is omitted from encoding
         };
 
@@ -698,12 +686,12 @@ mod tests {
                 source_hash: B256::default(),
                 from: Address::default(),
                 to: TxKind::default(),
-                mint: Some(100),
+                mint: 100,
                 value: U256::default(),
                 gas_limit: 50000,
                 is_system_transaction: true,
                 input: Bytes::default(),
-                eth_value: Some(100),
+                eth_value: 100,
                 eth_tx_value: Some(eth_tx_value),
             };
 
@@ -797,7 +785,7 @@ pub(super) mod serde_bincode_compat {
         gas_limit: u64,
         is_system_transaction: bool,
         #[serde(default)]
-        eth_value: Option<u128>,
+        eth_value: u128,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         eth_tx_value: Option<u128>,
         input: Cow<'a, Bytes>,

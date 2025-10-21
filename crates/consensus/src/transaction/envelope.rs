@@ -721,7 +721,7 @@ mod tests {
             value: U256::from(4_u64),
             input: Bytes::from(vec![5]),
             is_system_transaction: false,
-            eth_value: Some(100),
+            eth_value: 100,
             eth_tx_value: Some(100),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
@@ -743,7 +743,7 @@ mod tests {
             from: Address::random(),
             mint: u128::MAX,
             is_system_transaction: false,
-            eth_value: Some(u128::MAX),
+            eth_value: u128::MAX,
             eth_tx_value: Some(u128::MAX),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
