@@ -137,6 +137,7 @@ impl From<TxDeposit> for OpTransactionRequest {
             gas_limit,
             is_system_transaction: _,
             input,
+            ..
         } = tx;
 
         Self(TransactionRequest {
