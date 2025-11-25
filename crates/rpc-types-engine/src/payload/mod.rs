@@ -5,12 +5,13 @@ pub mod v3;
 pub mod v4;
 
 use crate::{OpExecutionPayloadSidecar, OpExecutionPayloadV4};
-use alloy_consensus::{Block, BlockHeader, Transaction};
+use alloc::vec::Vec;
+use alloy_consensus::{Block, BlockHeader, HeaderInfo, Transaction};
 use alloy_eips::{Decodable2718, Encodable2718, Typed2718, eip7685::EMPTY_REQUESTS_HASH};
-use alloy_primitives::{B256, Sealable};
+use alloy_primitives::{Address, B256, Bytes, Sealable, U256};
 use alloy_rpc_types_engine::{
     ExecutionPayload, ExecutionPayloadInputV2, ExecutionPayloadV1, ExecutionPayloadV2,
-    ExecutionPayloadV3,
+    ExecutionPayloadV3, PayloadError,
 };
 use error::OpPayloadError;
 
@@ -18,6 +19,8 @@ use error::OpPayloadError;
 /// [`OpExecutionPayloadV4`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "std", derive(ssz_derive::Encode, ssz_derive::Decode))]
+#[cfg_attr(feature = "std", ssz(enum_behaviour = "transparent"))]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum OpExecutionPayload {
     /// V1 payload
@@ -50,9 +53,8 @@ impl<'de> serde::Deserialize<'de> for OpExecutionPayload {
                 A: serde::de::MapAccess<'de>,
             {
                 use alloc::string::String;
-                use alloy_primitives::map::HashMap;
+                use alloy_primitives::{U64, map::HashMap};
                 use alloy_rpc_types_engine::ExecutionPayloadV1;
-                use serde::de::IntoDeserializer;
 
                 enum Fields {
                     ParentHash,
@@ -155,24 +157,20 @@ impl<'de> serde::Deserialize<'de> for OpExecutionPayload {
                         Fields::LogsBloom => logs_bloom = Some(map.next_value()?),
                         Fields::PrevRandao => prev_randao = Some(map.next_value()?),
                         Fields::BlockNumber => {
-                            let raw = map.next_value::<&str>()?;
-                            block_number =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            block_number = Some(raw.to());
                         }
                         Fields::GasLimit => {
-                            let raw = map.next_value::<&str>()?;
-                            gas_limit =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            gas_limit = Some(raw.to());
                         }
                         Fields::GasUsed => {
-                            let raw = map.next_value::<String>()?;
-                            gas_used =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            gas_used = Some(raw.to());
                         }
                         Fields::Timestamp => {
-                            let raw = map.next_value::<String>()?;
-                            timestamp =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            timestamp = Some(raw.to());
                         }
                         Fields::ExtraData => extra_data = Some(map.next_value()?),
                         Fields::BaseFeePerGas => base_fee_per_gas = Some(map.next_value()?),
@@ -180,14 +178,12 @@ impl<'de> serde::Deserialize<'de> for OpExecutionPayload {
                         Fields::Transactions => transactions = Some(map.next_value()?),
                         Fields::Withdrawals => withdrawals = Some(map.next_value()?),
                         Fields::BlobGasUsed => {
-                            let raw = map.next_value::<String>()?;
-                            blob_gas_used =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            blob_gas_used = Some(raw.to());
                         }
                         Fields::ExcessBlobGas => {
-                            let raw = map.next_value::<String>()?;
-                            excess_blob_gas =
-                                Some(alloy_serde::quantity::deserialize(raw.into_deserializer())?);
+                            let raw = map.next_value::<U64>()?;
+                            excess_blob_gas = Some(raw.to());
                         }
                         Fields::WithdrawalsRoot => withdrawals_root = Some(map.next_value()?),
                         Fields::Unknown(field) => {
@@ -445,6 +441,16 @@ impl OpExecutionPayload {
         }
     }
 
+    /// Returns the transactions for the payload.
+    pub const fn transactions(&self) -> &Vec<Bytes> {
+        &self.as_v1().transactions
+    }
+
+    /// Returns a mutable reference to the transactions for the payload.
+    pub const fn transactions_mut(&mut self) -> &mut Vec<Bytes> {
+        &mut self.as_v1_mut().transactions
+    }
+
     /// Returns the parent hash for the payload.
     pub const fn parent_hash(&self) -> B256 {
         self.as_v1().parent_hash
@@ -465,6 +471,102 @@ impl OpExecutionPayload {
         self.as_v1().timestamp
     }
 
+    /// Returns the fee recipient for this payload.
+    pub const fn fee_recipient(&self) -> Address {
+        self.as_v1().fee_recipient
+    }
+
+    /// Returns the gas limit for this payload.
+    pub const fn gas_limit(&self) -> u64 {
+        self.as_v1().gas_limit
+    }
+
+    /// Returns the saturated base fee per gas for this payload.
+    pub fn saturated_base_fee_per_gas(&self) -> u64 {
+        self.as_v1().base_fee_per_gas.saturating_to()
+    }
+
+    /// Returns the excess blob gas for this payload.
+    pub fn excess_blob_gas(&self) -> Option<u64> {
+        self.as_v3().map(|payload| payload.excess_blob_gas)
+    }
+
+    /// Returns the blob gas used for this payload.
+    pub fn blob_gas_used(&self) -> Option<u64> {
+        self.as_v3().map(|payload| payload.blob_gas_used)
+    }
+
+    /// Returns the prev randao for this payload.
+    pub const fn prev_randao(&self) -> B256 {
+        self.as_v1().prev_randao
+    }
+
+    /// Extracts essential information into one container type.
+    pub fn header_info(&self) -> HeaderInfo {
+        HeaderInfo {
+            number: self.block_number(),
+            beneficiary: self.fee_recipient(),
+            timestamp: self.timestamp(),
+            gas_limit: self.gas_limit(),
+            base_fee_per_gas: Some(self.saturated_base_fee_per_gas()),
+            excess_blob_gas: self.excess_blob_gas(),
+            blob_gas_used: self.blob_gas_used(),
+            difficulty: U256::ZERO,
+            mix_hash: Some(self.prev_randao()),
+        }
+    }
+
+    /// Converts [`OpExecutionPayload`] to [`Block`] with raw transactions.
+    ///
+    /// Caution: This does not set fields that are not part of the payload and only part of the
+    /// [`OpExecutionPayloadSidecar`]:
+    /// - parent_beacon_block_root
+    ///
+    /// See also: [`OpExecutionPayload::into_block_with_sidecar_raw`]
+    pub fn into_block_raw(self) -> Result<Block<alloy_primitives::Bytes>, PayloadError> {
+        match self {
+            Self::V1(payload) => payload.into_block_raw(),
+            Self::V2(payload) => payload.into_block_raw(),
+            Self::V3(payload) => payload.into_block_raw(),
+            Self::V4(payload) => payload.into_block_raw(),
+        }
+    }
+
+    /// Creates a new unsealed block from the given payload and payload sidecar with raw
+    /// transactions.
+    ///
+    /// This sets the `parent_beacon_block_root` and `requests_hash` if present in the sidecar.
+    /// Also validates that L1 withdrawals are empty.
+    ///
+    /// See also: [`OpExecutionPayload::try_into_block_with_sidecar`]
+    pub fn into_block_with_sidecar_raw(
+        self,
+        sidecar: &OpExecutionPayloadSidecar,
+    ) -> Result<Block<alloy_primitives::Bytes>, OpPayloadError> {
+        if let Some(payload) = self.as_v2()
+            && !payload.withdrawals.is_empty()
+        {
+            return Err(OpPayloadError::NonEmptyL1Withdrawals);
+        }
+
+        let mut block = self.into_block_raw()?;
+
+        if let Some(blobs_hashes) = sidecar.versioned_hashes()
+            && !blobs_hashes.is_empty()
+        {
+            return Err(OpPayloadError::NonEmptyBlobVersionedHashes);
+        }
+        if let Some(reqs_hash) = sidecar.requests_hash() {
+            if reqs_hash != EMPTY_REQUESTS_HASH {
+                return Err(OpPayloadError::NonEmptyELRequests);
+            }
+            block.header.requests_hash = Some(EMPTY_REQUESTS_HASH)
+        }
+        block.header.parent_beacon_block_root = sidecar.parent_beacon_block_root();
+
+        Ok(block)
+    }
+
     #[allow(rustdoc::broken_intra_doc_links)]
     /// Converts [`OpExecutionPayload`] to [`Block`].
     ///
@@ -478,16 +580,41 @@ impl OpExecutionPayload {
     ///
     /// See also: [`OpExecutionPayload::try_into_block_with_sidecar`]
     pub fn try_into_block<T: Decodable2718 + Typed2718>(self) -> Result<Block<T>, OpPayloadError> {
-        if let Some(payload) = self.as_v2() {
-            if !payload.withdrawals.is_empty() {
-                return Err(OpPayloadError::NonEmptyL1Withdrawals);
-            }
+        self.try_into_block_with(|tx| {
+            T::decode_2718_exact(tx.as_ref())
+                .map_err(alloy_rlp::Error::from)
+                .map_err(PayloadError::from)
+        })
+    }
+
+    #[allow(rustdoc::broken_intra_doc_links)]
+    /// Converts [`OpExecutionPayload`] to [`Block`] with a custom transaction mapper.
+    ///
+    /// Checks that payload doesn't contain:
+    /// - blob transactions
+    /// - L1 withdrawals
+    ///
+    /// Caution: This does not set fields that are not part of the payload and only part of the
+    /// [`OpExecutionPayloadSidecar`]:
+    /// - parent_beacon_block_root
+    ///
+    /// See also: [`OpExecutionPayload::try_into_block_with_sidecar_with`]
+    pub fn try_into_block_with<T, F, E>(self, f: F) -> Result<Block<T>, OpPayloadError>
+    where
+        T: Typed2718,
+        F: FnMut(alloy_primitives::Bytes) -> Result<T, E>,
+        E: Into<PayloadError>,
+    {
+        if let Some(payload) = self.as_v2()
+            && !payload.withdrawals.is_empty()
+        {
+            return Err(OpPayloadError::NonEmptyL1Withdrawals);
         }
         let block = match self {
-            Self::V1(payload) => return Ok(payload.try_into_block()?),
-            Self::V2(payload) => return Ok(payload.try_into_block()?),
-            Self::V3(payload) => payload.try_into_block()?,
-            Self::V4(payload) => payload.try_into_block()?,
+            Self::V1(payload) => return Ok(payload.try_into_block_with(f)?),
+            Self::V2(payload) => return Ok(payload.try_into_block_with(f)?),
+            Self::V3(payload) => payload.try_into_block_with(f)?,
+            Self::V4(payload) => payload.try_into_block_with(f)?,
         };
         if block.body.has_eip4844_transactions() {
             return Err(OpPayloadError::BlobTransaction);
@@ -498,7 +625,7 @@ impl OpExecutionPayload {
 
     /// Tries to create a new unsealed block from the given payload and payload sidecar.
     ///
-    /// Additional to checks preformed in [`OpExecutionPayload::try_into_block`], which is called
+    /// Additional to checks performed in [`OpExecutionPayload::try_into_block`], which is called
     /// under the hood, also checks that sidecar doesn't contain:
     /// - blob versioned hashes
     /// - execution layer requests
@@ -509,11 +636,38 @@ impl OpExecutionPayload {
         self,
         sidecar: &OpExecutionPayloadSidecar,
     ) -> Result<Block<T>, OpPayloadError> {
-        let mut base_payload = self.try_into_block()?;
-        if let Some(blobs_hashes) = sidecar.versioned_hashes() {
-            if !blobs_hashes.is_empty() {
-                return Err(OpPayloadError::NonEmptyBlobVersionedHashes);
-            }
+        self.try_into_block_with_sidecar_with(sidecar, |tx| {
+            T::decode_2718_exact(tx.as_ref())
+                .map_err(alloy_rlp::Error::from)
+                .map_err(PayloadError::from)
+        })
+    }
+
+    /// Tries to create a new unsealed block from the given payload and payload sidecar with a
+    /// custom transaction mapper.
+    ///
+    /// Additional to checks performed in [`OpExecutionPayload::try_into_block_with`], which is
+    /// called under the hood, also checks that sidecar doesn't contain:
+    /// - blob versioned hashes
+    /// - execution layer requests
+    ///
+    /// See also docs for
+    /// [`ExecutionPayload::try_into_block_with_sidecar_with`](alloy_rpc_types_engine::ExecutionPayload::try_into_block_with_sidecar_with).
+    pub fn try_into_block_with_sidecar_with<T, F, E>(
+        self,
+        sidecar: &OpExecutionPayloadSidecar,
+        f: F,
+    ) -> Result<Block<T>, OpPayloadError>
+    where
+        T: Typed2718,
+        F: FnMut(alloy_primitives::Bytes) -> Result<T, E>,
+        E: Into<PayloadError>,
+    {
+        let mut base_payload = self.try_into_block_with(f)?;
+        if let Some(blobs_hashes) = sidecar.versioned_hashes()
+            && !blobs_hashes.is_empty()
+        {
+            return Err(OpPayloadError::NonEmptyBlobVersionedHashes);
         }
         if let Some(reqs_hash) = sidecar.requests_hash() {
             if reqs_hash != EMPTY_REQUESTS_HASH {
@@ -524,6 +678,75 @@ impl OpExecutionPayload {
         base_payload.header.parent_beacon_block_root = sidecar.parent_beacon_block_root();
 
         Ok(base_payload)
+    }
+
+    /// Returns an iterator over the decoded transactions in this payload.
+    ///
+    /// This iterator will decode transactions on the fly.
+    pub fn decoded_transactions<T: Decodable2718>(
+        &self,
+    ) -> impl Iterator<Item = alloy_eips::eip2718::Eip2718Result<T>> + '_ {
+        self.transactions().iter().map(|tx_bytes| T::decode_2718_exact(tx_bytes.as_ref()))
+    }
+
+    /// Returns iterator over decoded transactions with their original encoded bytes.
+    ///
+    /// This iterator will decode transactions on the fly and return them with their bytes.
+    pub fn decoded_transactions_with_encoded<T: Decodable2718>(
+        &self,
+    ) -> impl Iterator<Item = alloy_eips::eip2718::Eip2718Result<alloy_eips::eip2718::WithEncoded<T>>> + '_
+    {
+        self.transactions().iter().map(|tx_bytes| {
+            T::decode_2718_exact(tx_bytes.as_ref())
+                .map(|tx| alloy_eips::eip2718::WithEncoded::new(tx_bytes.clone(), tx))
+        })
+    }
+
+    /// Returns an iterator over the recovered transactions in this payload.
+    ///
+    /// This iterator will decode and recover signer addresses for transactions on the fly.
+    pub fn recovered_transactions<T>(
+        &self,
+    ) -> impl Iterator<
+        Item = Result<
+            alloy_consensus::transaction::Recovered<T>,
+            alloy_consensus::crypto::RecoveryError,
+        >,
+    > + '_
+    where
+        T: Decodable2718 + alloy_consensus::transaction::SignerRecoverable,
+    {
+        self.decoded_transactions::<T>().map(|res| {
+            res.map_err(alloy_consensus::crypto::RecoveryError::from_source)
+                .and_then(|tx| tx.try_into_recovered())
+        })
+    }
+
+    /// Returns an iterator over the recovered transactions in this payload with their
+    /// original encoded bytes.
+    ///
+    /// This iterator will decode and recover signer addresses for transactions on the fly
+    /// and return them with their bytes.
+    pub fn recovered_transactions_with_encoded<T>(
+        &self,
+    ) -> impl Iterator<
+        Item = Result<
+            alloy_eips::eip2718::WithEncoded<alloy_consensus::transaction::Recovered<T>>,
+            alloy_consensus::crypto::RecoveryError,
+        >,
+    > + '_
+    where
+        T: Decodable2718 + alloy_consensus::transaction::SignerRecoverable,
+    {
+        self.transactions().iter().map(|tx_bytes| {
+            T::decode_2718_exact(tx_bytes.as_ref())
+                .map_err(alloy_consensus::crypto::RecoveryError::from_source)
+                .and_then(|tx| {
+                    tx.try_into_recovered().map(|recovered| {
+                        alloy_eips::eip2718::WithEncoded::new(tx_bytes.clone(), recovered)
+                    })
+                })
+        })
     }
 }
 

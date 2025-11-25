@@ -5,10 +5,11 @@ use alloy_consensus::TxReceipt;
 mod envelope;
 pub use envelope::OpReceiptEnvelope;
 
-pub(crate) mod receipts;
-pub use receipts::{OpDepositReceipt, OpDepositReceiptWithBloom};
-// pub(crate) mod mantle;
-// pub use mantle::{MantleTxStoredReceipt, MantleTxStoredReceiptWithBloom};
+pub(crate) mod deposit;
+pub use deposit::{OpDepositReceipt, OpDepositReceiptWithBloom};
+
+mod receipt;
+pub use receipt::OpReceipt;
 
 /// Receipt is the result of a transaction execution.
 pub trait OpTxReceipt: TxReceipt {

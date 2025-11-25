@@ -28,6 +28,7 @@ alloy-consensus.workspace = true
 # Encoding
 snap = { workspace = true, optional = true }
 ethereum_ssz = { workspace = true, optional = true }
+ethereum_ssz_derive = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, optional = true }
@@ -43,13 +44,14 @@ derive_more = { workspace = true, features = ["as_ref", "deref_mut"] }
 arbtest.workspace = true
 serde_json.workspace = true
 arbitrary = { workspace = true, features = ["derive"] }
-alloy-primitives = { workspace = true, features = ["arbitrary"] }
+alloy-primitives = { workspace = true, features = ["arbitrary", "getrandom"] }
 
 [features]
 default = ["std", "serde"]
 std = [
   "dep:snap",
   "dep:ethereum_ssz",
+  "dep:ethereum_ssz_derive",
   "alloy-rpc-types-engine/ssz",
   "alloy-primitives/std",
   "alloy-rpc-types-engine/std",

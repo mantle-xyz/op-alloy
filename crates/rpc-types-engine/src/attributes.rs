@@ -11,6 +11,7 @@ use alloy_rlp::Result;
 use alloy_rpc_types_engine::PayloadAttributes;
 use op_alloy_consensus::{
     EIP1559ParamError, OpTxEnvelope, decode_eip_1559_params, encode_holocene_extra_data,
+    encode_jovian_extra_data,
 };
 
 /// Optimism Payload Attributes
@@ -22,23 +23,32 @@ pub struct OpPayloadAttributes {
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub payload_attributes: PayloadAttributes,
     /// Transactions is a field for rollups: the transactions list is forced into the block
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub transactions: Option<Vec<Bytes>>,
     /// If true, the no transactions are taken out of the tx-pool, only transactions from the above
     /// Transactions list will be included.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub no_tx_pool: Option<bool>,
     /// If set, this sets the exact gas limit the block produced with.
     #[cfg_attr(
         feature = "serde",
-        serde(skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")
+        serde(
+            default,
+            skip_serializing_if = "Option::is_none",
+            with = "alloy_serde::quantity::opt"
+        )
     )]
     pub gas_limit: Option<u64>,
     /// If set, this sets the EIP-1559 parameters for the block.
     ///
     /// Prior to Holocene activation, this field should always be [None].
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub eip_1559_params: Option<B64>,
+    /// If set, this sets the minimum base fee for the block.
+    ///
+    /// Prior to Jovian activation, this field should always be [None].
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub min_base_fee: Option<u64>,
 }
 
 impl OpPayloadAttributes {
@@ -47,6 +57,9 @@ impl OpPayloadAttributes {
         &self,
         default_base_fee_params: BaseFeeParams,
     ) -> Result<Bytes, EIP1559ParamError> {
+        if self.min_base_fee.is_some() {
+            return Err(EIP1559ParamError::MinBaseFeeMustBeNone);
+        }
         self.eip_1559_params
             .map(|params| encode_holocene_extra_data(params, default_base_fee_params))
             .ok_or(EIP1559ParamError::NoEIP1559Params)?
@@ -60,14 +73,37 @@ impl OpPayloadAttributes {
         self.eip_1559_params.map(decode_eip_1559_params)
     }
 
+    /// Encodes the `eip1559` parameters for the payload along with the minimum base fee.
+    pub fn get_jovian_extra_data(
+        &self,
+        default_base_fee_params: BaseFeeParams,
+    ) -> Result<Bytes, EIP1559ParamError> {
+        if self.min_base_fee.is_none() {
+            return Err(EIP1559ParamError::MinBaseFeeNotSet);
+        }
+        self.eip_1559_params
+            .map(|params| {
+                encode_jovian_extra_data(
+                    params,
+                    default_base_fee_params,
+                    self.min_base_fee.unwrap(),
+                )
+            })
+            .ok_or(EIP1559ParamError::NoEIP1559Params)?
+    }
+
     /// Returns an iterator over the decoded [`OpTxEnvelope`] in this attributes.
     ///
     /// This iterator will be empty if there are no transactions in the attributes.
     pub fn decoded_transactions(&self) -> impl Iterator<Item = Eip2718Result<OpTxEnvelope>> + '_ {
-        self.transactions
-            .iter()
-            .flatten()
-            .map(|tx_bytes| OpTxEnvelope::decode_2718(&mut tx_bytes.as_ref()))
+        self.transactions.iter().flatten().map(|tx_bytes| {
+            let mut buf = tx_bytes.as_ref();
+            let tx = OpTxEnvelope::decode_2718(&mut buf).map_err(alloy_rlp::Error::from)?;
+            if !buf.is_empty() {
+                return Err(alloy_rlp::Error::UnexpectedLength.into());
+            }
+            Ok(tx)
+        })
     }
 
     /// Returns iterator over decoded transactions with their original encoded bytes.
@@ -93,16 +129,14 @@ impl OpPayloadAttributes {
     ) -> impl Iterator<
         Item = Result<
             alloy_consensus::transaction::Recovered<OpTxEnvelope>,
-            alloy_primitives::SignatureError,
+            alloy_consensus::crypto::RecoveryError,
         >,
     > + '_ {
+        use alloy_consensus::transaction::SignerRecoverable;
+
         self.decoded_transactions().map(|res| {
-            res.map_err(|_| {
-                alloy_primitives::SignatureError::FromBytes(
-                    "Failed to decode 2718 transaction envelope",
-                )
-            })
-            .and_then(|tx| tx.try_into_recovered())
+            res.map_err(alloy_consensus::crypto::RecoveryError::from_source)
+                .and_then(|tx| tx.try_into_recovered())
         })
     }
 
@@ -116,7 +150,7 @@ impl OpPayloadAttributes {
     ) -> impl Iterator<
         Item = Result<
             WithEncoded<alloy_consensus::transaction::Recovered<OpTxEnvelope>>,
-            alloy_primitives::SignatureError,
+            alloy_consensus::crypto::RecoveryError,
         >,
     > + '_ {
         self.transactions
@@ -150,6 +184,7 @@ mod test {
             no_tx_pool: Some(true),
             gas_limit: Some(42),
             eip_1559_params: None,
+            min_base_fee: None,
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();
@@ -172,6 +207,7 @@ mod test {
             no_tx_pool: Some(true),
             gas_limit: Some(42),
             eip_1559_params: Some(b64!("0000dead0000beef")),
+            min_base_fee: None,
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();
@@ -196,5 +232,117 @@ mod test {
             OpPayloadAttributes { eip_1559_params: Some(B64::ZERO), ..Default::default() };
         let extra_data = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
         assert_eq!(extra_data.unwrap(), Bytes::copy_from_slice(&[0, 0, 0, 0, 80, 0, 0, 0, 60]));
+    }
+
+    #[test]
+    fn test_serde_roundtrip_attributes_pre_jovian() {
+        let attributes = OpPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 0x1337,
+                prev_randao: B256::ZERO,
+                suggested_fee_recipient: Address::ZERO,
+                withdrawals: Default::default(),
+                parent_beacon_block_root: Some(B256::ZERO),
+            },
+            transactions: Some(vec![b"hello".to_vec().into()]),
+            no_tx_pool: Some(true),
+            gas_limit: Some(42),
+            eip_1559_params: Some(b64!("0000dead0000beef")),
+            min_base_fee: None,
+        };
+
+        let ser = serde_json::to_string(&attributes).unwrap();
+        let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
+
+        assert_eq!(attributes, de);
+    }
+
+    #[test]
+    fn test_serde_roundtrip_attributes_post_jovian() {
+        let attributes = OpPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 0x1337,
+                prev_randao: B256::ZERO,
+                suggested_fee_recipient: Address::ZERO,
+                withdrawals: Default::default(),
+                parent_beacon_block_root: Some(B256::ZERO),
+            },
+            transactions: Some(vec![b"hello".to_vec().into()]),
+            no_tx_pool: Some(true),
+            gas_limit: Some(42),
+            eip_1559_params: None,
+            min_base_fee: Some(1),
+        };
+
+        let ser = serde_json::to_string(&attributes).unwrap();
+        let de: OpPayloadAttributes = serde_json::from_str(&ser).unwrap();
+
+        assert_eq!(attributes, de);
+    }
+
+    #[test]
+    fn test_get_extra_data_post_jovian() {
+        let attributes = OpPayloadAttributes {
+            eip_1559_params: Some(B64::from_str("0x0000000800000008").unwrap()),
+            min_base_fee: Some(257),
+            ..Default::default()
+        };
+
+        let extra_data = attributes.get_jovian_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(
+            extra_data.unwrap(),
+            Bytes::copy_from_slice(&[1, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1, 1])
+        );
+    }
+
+    #[test]
+    fn test_get_extra_data_post_jovian_default() {
+        let attributes = OpPayloadAttributes {
+            eip_1559_params: Some(B64::ZERO),
+            min_base_fee: Some(0),
+            ..Default::default()
+        };
+
+        let extra_data = attributes.get_jovian_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(
+            extra_data.unwrap(),
+            Bytes::copy_from_slice(&[1, 0, 0, 0, 80, 0, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn test_get_jovian_extra_data_fails_without_min_base_fee() {
+        let attributes = OpPayloadAttributes {
+            eip_1559_params: Some(B64::from_str("0x0000000800000008").unwrap()),
+            min_base_fee: None,
+            ..Default::default()
+        };
+
+        let result = attributes.get_jovian_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(result.unwrap_err(), EIP1559ParamError::MinBaseFeeNotSet);
+    }
+
+    #[test]
+    fn test_min_base_fee_must_be_none_before_jovian() {
+        let attributes = OpPayloadAttributes {
+            eip_1559_params: Some(B64::from_str("0x0000000800000008").unwrap()),
+            min_base_fee: Some(100),
+            ..Default::default()
+        };
+
+        // Use Holocene function for pre-Jovian decoding of extra data
+        let result = attributes.get_holocene_extra_data(BaseFeeParams::new(80, 60));
+        assert_eq!(result.unwrap_err(), EIP1559ParamError::MinBaseFeeMustBeNone);
+    }
+
+    // <https://github.com/alloy-rs/op-alloy/issues/601>
+    #[test]
+    fn test_serde_attributes() {
+        let json = r#"{"timestamp":"0x68e8f68b","prevRandao":"0x0c00c066d51a9cd87d962de52da13e9dfd7f08d507601f916e116aacfe370de7","suggestedFeeRecipient":"0x4200000000000000000000000000000000000011","withdrawals":[],"parentBeaconBlockRoot":"0x6d9579b008332936037f0167d74af108db1fbe22d1bd6552f2d4453419afa4e2","transactions":["0x7ef8f8a058642a460a8c2fb85bae8237221cfa2f138777697c73052afe5adbd911ec9f5194deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000010000000068e8f688000000000000000d000000000000000000000000000000000000000000000000000000000a9dd4be0000000000000000000000000000000000000000000000000000000000000001844ea1c8f674542957f8fd73f34545ed30d24ebfa80775b869ea8848a6f38259000000000000000000000000aff0ca253b97e54440965855cec0a8a2e2399896"],"eip1559Params":"0x000000fa00000006"}"#;
+
+        let attributes: OpPayloadAttributes = serde_json::from_str(json).unwrap();
+        let val = serde_json::to_value(&attributes).unwrap();
+        let round_trip: OpPayloadAttributes = serde_json::from_value(val).unwrap();
+        assert_eq!(attributes, round_trip);
     }
 }

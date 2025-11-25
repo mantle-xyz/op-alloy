@@ -120,6 +120,12 @@ impl OpTransactionRequest {
     }
 }
 
+impl From<OpTransactionRequest> for TransactionRequest {
+    fn from(value: OpTransactionRequest) -> Self {
+        value.0
+    }
+}
+
 impl From<TxDeposit> for OpTransactionRequest {
     fn from(tx: TxDeposit) -> Self {
         let TxDeposit {

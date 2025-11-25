@@ -1,20 +1,15 @@
 //! Defines the exact transaction variants that are allowed to be propagated over the eth p2p
 //! protocol in op.
 
-use crate::{OpTxEnvelope, OpTxType};
+use crate::OpTxEnvelope;
 use alloy_consensus::{
-    SignableTransaction, Signed, Transaction, TxEip7702, TxEnvelope, Typed2718,
+    Extended, SignableTransaction, Signed, TransactionEnvelope, TxEip7702, TxEnvelope,
     error::ValueError,
-    transaction::{RlpEcdsaDecodableTx, TxEip1559, TxEip2930, TxLegacy},
+    transaction::{TxEip1559, TxEip2930, TxHashRef, TxLegacy},
 };
-use alloy_eips::{
-    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718, IsTyped2718},
-    eip2930::AccessList,
-    eip7702::SignedAuthorization,
-};
-use alloy_primitives::{B256, Bytes, ChainId, Signature, TxHash, TxKind, U256, bytes};
-use alloy_rlp::{Decodable, Encodable, Header};
-use core::hash::{Hash, Hasher};
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{B256, Signature, TxHash, bytes};
+use core::hash::Hash;
 
 /// All possible transactions that can be included in a response to `GetPooledTransactions`.
 /// A response to `GetPooledTransactions`. This can include a typed signed transaction, but cannot
@@ -22,17 +17,20 @@ use core::hash::{Hash, Hasher};
 ///
 /// The difference between this and the [`OpTxEnvelope`] is that this type does not have the deposit
 /// transaction variant, which is not expected to be pooled.
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(all(any(test, feature = "arbitrary"), feature = "k256"), derive(arbitrary::Arbitrary))]
+#[derive(Clone, Debug, TransactionEnvelope)]
+#[envelope(tx_type_name = OpPooledTxType, serde_cfg(feature = "serde"))]
 pub enum OpPooledTransaction {
     /// An untagged [`TxLegacy`].
+    #[envelope(ty = 0)]
     Legacy(Signed<TxLegacy>),
     /// A [`TxEip2930`] transaction tagged with type 1.
+    #[envelope(ty = 1)]
     Eip2930(Signed<TxEip2930>),
     /// A [`TxEip1559`] transaction tagged with type 2.
+    #[envelope(ty = 2)]
     Eip1559(Signed<TxEip1559>),
     /// A [`TxEip7702`] transaction tagged with type 4.
+    #[envelope(ty = 4)]
     Eip7702(Signed<TxEip7702>),
 }
 
@@ -65,30 +63,6 @@ impl OpPooledTransaction {
             Self::Eip2930(tx) => tx.signature(),
             Self::Eip1559(tx) => tx.signature(),
             Self::Eip7702(tx) => tx.signature(),
-        }
-    }
-
-    /// The length of the 2718 encoded envelope in network format. This is the
-    /// length of the header + the length of the type flag and inner encoding.
-    fn network_len(&self) -> usize {
-        let mut payload_length = self.encode_2718_len();
-        if !self.is_legacy() {
-            payload_length += Header { list: false, payload_length }.length();
-        }
-
-        payload_length
-    }
-
-    /// Recover the signer of the transaction.
-    #[cfg(feature = "k256")]
-    pub fn recover_signer(
-        &self,
-    ) -> Result<alloy_primitives::Address, alloy_primitives::SignatureError> {
-        match self {
-            Self::Legacy(tx) => tx.recover_signer(),
-            Self::Eip2930(tx) => tx.recover_signer(),
-            Self::Eip1559(tx) => tx.recover_signer(),
-            Self::Eip7702(tx) => tx.recover_signer(),
         }
     }
 
@@ -191,258 +165,49 @@ impl From<OpPooledTransaction> for alloy_consensus::transaction::PooledTransacti
     }
 }
 
-impl Hash for OpPooledTransaction {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.trie_hash().hash(state);
+impl TxHashRef for OpPooledTransaction {
+    fn tx_hash(&self) -> &B256 {
+        Self::hash(self)
     }
 }
 
-impl Encodable for OpPooledTransaction {
-    /// This encodes the transaction _with_ the signature, and an rlp header.
-    ///
-    /// For legacy transactions, it encodes the transaction data:
-    /// `rlp(tx-data)`
-    ///
-    /// For EIP-2718 typed transactions, it encodes the transaction type followed by the rlp of the
-    /// transaction:
-    /// `rlp(tx-type || rlp(tx-data))`
-    fn encode(&self, out: &mut dyn bytes::BufMut) {
-        self.network_encode(out);
+#[cfg(feature = "k256")]
+impl alloy_consensus::transaction::SignerRecoverable for OpPooledTransaction {
+    fn recover_signer(
+        &self,
+    ) -> Result<alloy_primitives::Address, alloy_consensus::crypto::RecoveryError> {
+        let signature_hash = self.signature_hash();
+        alloy_consensus::crypto::secp256k1::recover_signer(self.signature(), signature_hash)
     }
 
-    fn length(&self) -> usize {
-        self.network_len()
+    fn recover_signer_unchecked(
+        &self,
+    ) -> Result<alloy_primitives::Address, alloy_consensus::crypto::RecoveryError> {
+        let signature_hash = self.signature_hash();
+        alloy_consensus::crypto::secp256k1::recover_signer_unchecked(
+            self.signature(),
+            signature_hash,
+        )
     }
-}
 
-impl Decodable for OpPooledTransaction {
-    /// Decodes an enveloped [`OpPooledTransaction`].
-    ///
-    /// CAUTION: this expects that `buf` is `rlp(tx_type || rlp(tx-data))`
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self::network_decode(buf)?)
-    }
-}
-
-impl Encodable2718 for OpPooledTransaction {
-    fn type_flag(&self) -> Option<u8> {
+    fn recover_unchecked_with_buf(
+        &self,
+        buf: &mut alloc::vec::Vec<u8>,
+    ) -> Result<alloy_primitives::Address, alloy_consensus::crypto::RecoveryError> {
         match self {
-            Self::Legacy(_) => None,
-            Self::Eip2930(_) => Some(0x01),
-            Self::Eip1559(_) => Some(0x02),
-            Self::Eip7702(_) => Some(0x04),
+            Self::Legacy(tx) => {
+                alloy_consensus::transaction::SignerRecoverable::recover_unchecked_with_buf(tx, buf)
+            }
+            Self::Eip2930(tx) => {
+                alloy_consensus::transaction::SignerRecoverable::recover_unchecked_with_buf(tx, buf)
+            }
+            Self::Eip1559(tx) => {
+                alloy_consensus::transaction::SignerRecoverable::recover_unchecked_with_buf(tx, buf)
+            }
+            Self::Eip7702(tx) => {
+                alloy_consensus::transaction::SignerRecoverable::recover_unchecked_with_buf(tx, buf)
+            }
         }
-    }
-
-    fn encode_2718_len(&self) -> usize {
-        match self {
-            Self::Legacy(tx) => tx.eip2718_encoded_length(),
-            Self::Eip2930(tx) => tx.eip2718_encoded_length(),
-            Self::Eip1559(tx) => tx.eip2718_encoded_length(),
-            Self::Eip7702(tx) => tx.eip2718_encoded_length(),
-        }
-    }
-
-    fn encode_2718(&self, out: &mut dyn alloy_rlp::BufMut) {
-        match self {
-            Self::Legacy(tx) => tx.eip2718_encode(out),
-            Self::Eip2930(tx) => tx.eip2718_encode(out),
-            Self::Eip1559(tx) => tx.eip2718_encode(out),
-            Self::Eip7702(tx) => tx.eip2718_encode(out),
-        }
-    }
-
-    fn trie_hash(&self) -> B256 {
-        *self.hash()
-    }
-}
-
-impl Decodable2718 for OpPooledTransaction {
-    fn typed_decode(ty: u8, buf: &mut &[u8]) -> Eip2718Result<Self> {
-        match ty.try_into().map_err(|_| alloy_rlp::Error::Custom("unexpected tx type"))? {
-            OpTxType::Eip2930 => Ok(TxEip2930::rlp_decode_signed(buf)?.into()),
-            OpTxType::Eip1559 => Ok(TxEip1559::rlp_decode_signed(buf)?.into()),
-            OpTxType::Eip7702 => Ok(TxEip7702::rlp_decode_signed(buf)?.into()),
-            OpTxType::Legacy => Err(Eip2718Error::UnexpectedType(OpTxType::Legacy.into())),
-            OpTxType::Deposit => Err(Eip2718Error::UnexpectedType(OpTxType::Deposit.into())),
-        }
-    }
-
-    fn fallback_decode(buf: &mut &[u8]) -> Eip2718Result<Self> {
-        TxLegacy::rlp_decode_signed(buf).map(Into::into).map_err(Into::into)
-    }
-}
-
-impl Transaction for OpPooledTransaction {
-    fn chain_id(&self) -> Option<ChainId> {
-        match self {
-            Self::Legacy(tx) => tx.tx().chain_id(),
-            Self::Eip2930(tx) => tx.tx().chain_id(),
-            Self::Eip1559(tx) => tx.tx().chain_id(),
-            Self::Eip7702(tx) => tx.tx().chain_id(),
-        }
-    }
-
-    fn nonce(&self) -> u64 {
-        match self {
-            Self::Legacy(tx) => tx.tx().nonce(),
-            Self::Eip2930(tx) => tx.tx().nonce(),
-            Self::Eip1559(tx) => tx.tx().nonce(),
-            Self::Eip7702(tx) => tx.tx().nonce(),
-        }
-    }
-
-    fn gas_limit(&self) -> u64 {
-        match self {
-            Self::Legacy(tx) => tx.tx().gas_limit(),
-            Self::Eip2930(tx) => tx.tx().gas_limit(),
-            Self::Eip1559(tx) => tx.tx().gas_limit(),
-            Self::Eip7702(tx) => tx.tx().gas_limit(),
-        }
-    }
-
-    fn gas_price(&self) -> Option<u128> {
-        match self {
-            Self::Legacy(tx) => tx.tx().gas_price(),
-            Self::Eip2930(tx) => tx.tx().gas_price(),
-            Self::Eip1559(tx) => tx.tx().gas_price(),
-            Self::Eip7702(tx) => tx.tx().gas_price(),
-        }
-    }
-
-    fn max_fee_per_gas(&self) -> u128 {
-        match self {
-            Self::Legacy(tx) => tx.tx().max_fee_per_gas(),
-            Self::Eip2930(tx) => tx.tx().max_fee_per_gas(),
-            Self::Eip1559(tx) => tx.tx().max_fee_per_gas(),
-            Self::Eip7702(tx) => tx.tx().max_fee_per_gas(),
-        }
-    }
-
-    fn max_priority_fee_per_gas(&self) -> Option<u128> {
-        match self {
-            Self::Legacy(tx) => tx.tx().max_priority_fee_per_gas(),
-            Self::Eip2930(tx) => tx.tx().max_priority_fee_per_gas(),
-            Self::Eip1559(tx) => tx.tx().max_priority_fee_per_gas(),
-            Self::Eip7702(tx) => tx.tx().max_priority_fee_per_gas(),
-        }
-    }
-
-    fn max_fee_per_blob_gas(&self) -> Option<u128> {
-        match self {
-            Self::Legacy(tx) => tx.tx().max_fee_per_blob_gas(),
-            Self::Eip2930(tx) => tx.tx().max_fee_per_blob_gas(),
-            Self::Eip1559(tx) => tx.tx().max_fee_per_blob_gas(),
-            Self::Eip7702(tx) => tx.tx().max_fee_per_blob_gas(),
-        }
-    }
-
-    fn priority_fee_or_price(&self) -> u128 {
-        match self {
-            Self::Legacy(tx) => tx.tx().priority_fee_or_price(),
-            Self::Eip2930(tx) => tx.tx().priority_fee_or_price(),
-            Self::Eip1559(tx) => tx.tx().priority_fee_or_price(),
-            Self::Eip7702(tx) => tx.tx().priority_fee_or_price(),
-        }
-    }
-
-    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
-        match self {
-            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip7702(tx) => tx.tx().effective_gas_price(base_fee),
-        }
-    }
-
-    fn is_dynamic_fee(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip7702(tx) => tx.tx().is_dynamic_fee(),
-        }
-    }
-
-    fn kind(&self) -> TxKind {
-        match self {
-            Self::Legacy(tx) => tx.tx().kind(),
-            Self::Eip2930(tx) => tx.tx().kind(),
-            Self::Eip1559(tx) => tx.tx().kind(),
-            Self::Eip7702(tx) => tx.tx().kind(),
-        }
-    }
-
-    fn is_create(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_create(),
-            Self::Eip2930(tx) => tx.tx().is_create(),
-            Self::Eip1559(tx) => tx.tx().is_create(),
-            Self::Eip7702(tx) => tx.tx().is_create(),
-        }
-    }
-
-    fn value(&self) -> U256 {
-        match self {
-            Self::Legacy(tx) => tx.tx().value(),
-            Self::Eip2930(tx) => tx.tx().value(),
-            Self::Eip1559(tx) => tx.tx().value(),
-            Self::Eip7702(tx) => tx.tx().value(),
-        }
-    }
-
-    fn input(&self) -> &Bytes {
-        match self {
-            Self::Legacy(tx) => tx.tx().input(),
-            Self::Eip2930(tx) => tx.tx().input(),
-            Self::Eip1559(tx) => tx.tx().input(),
-            Self::Eip7702(tx) => tx.tx().input(),
-        }
-    }
-
-    fn access_list(&self) -> Option<&AccessList> {
-        match self {
-            Self::Legacy(tx) => tx.tx().access_list(),
-            Self::Eip2930(tx) => tx.tx().access_list(),
-            Self::Eip1559(tx) => tx.tx().access_list(),
-            Self::Eip7702(tx) => tx.tx().access_list(),
-        }
-    }
-
-    fn blob_versioned_hashes(&self) -> Option<&[B256]> {
-        match self {
-            Self::Legacy(tx) => tx.tx().blob_versioned_hashes(),
-            Self::Eip2930(tx) => tx.tx().blob_versioned_hashes(),
-            Self::Eip1559(tx) => tx.tx().blob_versioned_hashes(),
-            Self::Eip7702(tx) => tx.tx().blob_versioned_hashes(),
-        }
-    }
-
-    fn authorization_list(&self) -> Option<&[SignedAuthorization]> {
-        match self {
-            Self::Legacy(tx) => tx.tx().authorization_list(),
-            Self::Eip2930(tx) => tx.tx().authorization_list(),
-            Self::Eip1559(tx) => tx.tx().authorization_list(),
-            Self::Eip7702(tx) => tx.tx().authorization_list(),
-        }
-    }
-}
-
-impl Typed2718 for OpPooledTransaction {
-    fn ty(&self) -> u8 {
-        match self {
-            Self::Legacy(tx) => tx.tx().ty(),
-            Self::Eip2930(tx) => tx.tx().ty(),
-            Self::Eip1559(tx) => tx.tx().ty(),
-            Self::Eip7702(tx) => tx.tx().ty(),
-        }
-    }
-}
-
-impl IsTyped2718 for OpPooledTransaction {
-    fn is_type(type_id: u8) -> bool {
-        // legacy | eip2930 | eip1559 | eip7702
-        matches!(type_id, 0 | 1 | 2 | 4)
     }
 }
 
@@ -466,10 +231,29 @@ impl TryFrom<OpTxEnvelope> for OpPooledTransaction {
     }
 }
 
+impl<Tx> From<OpPooledTransaction> for Extended<OpTxEnvelope, Tx> {
+    fn from(tx: OpPooledTransaction) -> Self {
+        Self::BuiltIn(tx.into())
+    }
+}
+
+impl<Tx> TryFrom<Extended<OpTxEnvelope, Tx>> for OpPooledTransaction {
+    type Error = ();
+
+    fn try_from(_tx: Extended<OpTxEnvelope, Tx>) -> Result<Self, Self::Error> {
+        match _tx {
+            Extended::BuiltIn(inner) => inner.try_into().map_err(|_| ()),
+            Extended::Other(_tx) => Err(()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_consensus::Transaction;
     use alloy_primitives::{address, hex};
+    use alloy_rlp::Decodable;
     use bytes::Bytes;
 
     #[test]

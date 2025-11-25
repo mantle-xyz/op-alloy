@@ -1,11 +1,20 @@
 //! Transaction receipt types for Optimism.
 
 use super::OpTxReceipt;
+use crate::transaction::OpDepositInfo;
 use alloy_consensus::{
     Eip658Value, Receipt, ReceiptWithBloom, RlpDecodableReceipt, RlpEncodableReceipt, TxReceipt,
 };
 use alloy_primitives::{Bloom, Log};
 use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header};
+
+/// [`OpDepositReceipt`] with calculated bloom filter, modified for the OP Stack.
+///
+/// This convenience type allows us to lazily calculate the bloom filter for a
+/// receipt, similar to [`Sealed`].
+///
+/// [`Sealed`]: alloy_consensus::Sealed
+pub type OpDepositReceiptWithBloom<T = Log> = ReceiptWithBloom<OpDepositReceipt<T>>;
 
 /// Receipt containing result of transaction execution.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
@@ -52,6 +61,47 @@ impl OpDepositReceipt {
     /// container type.
     pub fn with_bloom(self) -> OpDepositReceiptWithBloom {
         self.into()
+    }
+}
+
+impl<T> OpDepositReceipt<T> {
+    /// Maps the inner receipt value of this receipt.
+    ///
+    /// This is mainly useful for mapping the receipt log type to the rpc variant.
+    pub fn map_inner<U, F>(self, f: F) -> OpDepositReceipt<U>
+    where
+        F: FnOnce(Receipt<T>) -> Receipt<U>,
+    {
+        OpDepositReceipt {
+            inner: f(self.inner),
+            deposit_nonce: self.deposit_nonce,
+            deposit_receipt_version: self.deposit_receipt_version,
+        }
+    }
+
+    /// Attaches the given bloom to the receipt returning [`ReceiptWithBloom`].
+    pub const fn with_bloom_unchecked(self, bloom: Bloom) -> ReceiptWithBloom<Self> {
+        ReceiptWithBloom::new(self, bloom)
+    }
+
+    /// Consumes the type and returns the inner [`Receipt`].
+    pub fn into_inner(self) -> Receipt<T> {
+        self.inner
+    }
+
+    /// Returns the deposit info for this receipt.
+    pub const fn deposit_info(&self) -> OpDepositInfo {
+        OpDepositInfo {
+            deposit_nonce: self.deposit_nonce,
+            deposit_receipt_version: self.deposit_receipt_version,
+        }
+    }
+
+    /// Converts the receipt's log type by applying a function to each log.
+    ///
+    /// Returns the receipt with the new log type
+    pub fn map_logs<U>(self, f: impl FnMut(T) -> U) -> OpDepositReceipt<U> {
+        self.map_inner(|r| r.map_logs(f))
     }
 }
 
@@ -105,6 +155,12 @@ impl<T: Decodable> OpDepositReceipt<T> {
 impl<T> AsRef<Receipt<T>> for OpDepositReceipt<T> {
     fn as_ref(&self) -> &Receipt<T> {
         &self.inner
+    }
+}
+
+impl<T> From<OpDepositReceipt<T>> for Receipt<T> {
+    fn from(value: OpDepositReceipt<T>) -> Self {
+        value.into_inner()
     }
 }
 
@@ -182,13 +238,11 @@ impl OpTxReceipt for OpDepositReceipt {
     }
 }
 
-/// [`OpDepositReceipt`] with calculated bloom filter, modified for the OP Stack.
-///
-/// This convenience type allows us to lazily calculate the bloom filter for a
-/// receipt, similar to [`Sealed`].
-///
-/// [`Sealed`]: alloy_consensus::Sealed
-pub type OpDepositReceiptWithBloom<T = Log> = ReceiptWithBloom<OpDepositReceipt<T>>;
+impl<T> From<ReceiptWithBloom<Self>> for OpDepositReceipt<T> {
+    fn from(value: ReceiptWithBloom<Self>) -> Self {
+        value.receipt
+    }
+}
 
 #[cfg(feature = "arbitrary")]
 impl<'a, T> arbitrary::Arbitrary<'a> for OpDepositReceipt<T>

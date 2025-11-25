@@ -3,7 +3,7 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -16,8 +16,8 @@ pub use attributes::OpPayloadAttributes;
 
 mod envelope;
 pub use envelope::{
-    OpExecutionData, OpNetworkPayloadEnvelope, PayloadEnvelopeEncodeError, PayloadEnvelopeError,
-    PayloadHash,
+    OpExecutionData, OpExecutionPayloadEnvelope, OpNetworkPayloadEnvelope,
+    PayloadEnvelopeEncodeError, PayloadEnvelopeError, PayloadHash,
 };
 
 mod sidecar;
@@ -34,4 +34,10 @@ pub use payload::{
 mod superchain;
 pub use superchain::{
     ProtocolVersion, ProtocolVersionError, ProtocolVersionFormatV0, SuperchainSignal,
+};
+
+pub mod flashblock;
+pub use flashblock::{
+    OpFlashblockError, OpFlashblockPayload, OpFlashblockPayloadBase, OpFlashblockPayloadDelta,
+    OpFlashblockPayloadMetadata,
 };

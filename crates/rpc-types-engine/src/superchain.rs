@@ -22,9 +22,9 @@ use derive_more::derive::{Display, From};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct SuperchainSignal {
-    /// The recommended Supercain Protocol Version.
+    /// The recommended Superchain Protocol Version.
     pub recommended: ProtocolVersion,
-    /// The minimum Supercain Protocol Version required.
+    /// The minimum Superchain Protocol Version required.
     pub required: ProtocolVersion,
 }
 
@@ -52,13 +52,13 @@ pub enum ProtocolVersion {
 impl core::fmt::Display for ProtocolVersion {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::V0(value) => write!(f, "{}", value),
+            Self::V0(value) => write!(f, "{value}"),
         }
     }
 }
 
 /// An error that can occur when encoding or decoding a ProtocolVersion.
-#[derive(Copy, Clone, Debug, Display, From)]
+#[derive(Copy, Clone, thiserror::Error, Debug, Display, From)]
 pub enum ProtocolVersionError {
     /// An unsupported version was encountered.
     #[display("Unsupported version: {_0}")]
@@ -90,7 +90,7 @@ impl ProtocolVersion {
 
         match self {
             Self::V0(value) => {
-                bytes[0] = 0x00; // this is not necessary, but addded for clarity
+                bytes[0] = 0x00; // this is not necessary, but added for clarity
                 bytes[1..].copy_from_slice(&value.encode());
                 B256::from_slice(&bytes)
             }
@@ -166,7 +166,7 @@ impl ProtocolVersion {
     /// Returns a human-readable string representation of the ProtocolVersion
     pub fn display(&self) -> String {
         match self {
-            Self::V0(value) => format!("{}", value),
+            Self::V0(value) => format!("{value}"),
         }
     }
 }
@@ -204,7 +204,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolVersion {
 /// <patch> ::= <big-endian uint32>
 /// <pre-release> ::= <big-endian uint32>
 /// ```
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct ProtocolVersionFormatV0 {
     /// Differentiates forks and custom-builds of standard protocol
     pub build: B64,

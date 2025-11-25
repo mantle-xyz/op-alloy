@@ -18,7 +18,7 @@
 [odr]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/struct.OpDepositReceipt.html
 [ore]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpReceiptEnvelope.html
 [op-block]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/type.OpBlock.html
-[ty]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/enum.OpTxType.html
+[ty]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/transaction/enum.OpTxType.html
 [envelope]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/transaction/enum.OpTxEnvelope.html
 
 <!-- OP Stack Specs -->
@@ -52,7 +52,7 @@
 [alloy]: https://github.com/alloy-rs/alloy
 [op-alloy]: https://github.com/alloy-rs/op-alloy
 [b64]: https://docs.rs/alloy-primitives/latest/alloy_primitives/aliases/type.B64.html
-[tx-envelope]: https://docs.rs/alloy-consensus/latest/alloy_consensus/transaction/enum.TxEnvelope.html
+[tx-envelope]: https://docs.rs/op-alloy-consensus/latest/op_alloy_consensus/transaction/enum.OpTxType.html
 
 <!-- Kona links -->
 

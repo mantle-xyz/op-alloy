@@ -4,7 +4,7 @@
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub use alloy_network::*;
 
@@ -58,6 +58,10 @@ impl TransactionBuilder<Optimism> for OpTransactionRequest {
 
     fn set_nonce(&mut self, nonce: u64) {
         self.as_mut().set_nonce(nonce);
+    }
+
+    fn take_nonce(&mut self) -> Option<u64> {
+        self.as_mut().nonce.take()
     }
 
     fn input(&self) -> Option<&Bytes> {
@@ -231,5 +235,17 @@ impl NetworkWallet<Optimism> for EthereumWallet {
             TxEnvelope::Legacy(tx) => OpTxEnvelope::Legacy(tx),
             _ => unreachable!(),
         })
+    }
+}
+
+use alloy_provider::fillers::{
+    ChainIdFiller, GasFiller, JoinFill, NonceFiller, RecommendedFillers,
+};
+
+impl RecommendedFillers for Optimism {
+    type RecommendedFillers = JoinFill<GasFiller, JoinFill<NonceFiller, ChainIdFiller>>;
+
+    fn recommended_fillers() -> Self::RecommendedFillers {
+        Default::default()
     }
 }

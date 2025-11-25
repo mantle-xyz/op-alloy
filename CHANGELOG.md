@@ -5,11 +5,394 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.22.1) - 2025-11-11
+
+### Dependencies
+
+- Bump msrv ([#607](https://github.com/alloy-rs/op-alloy/issues/607))
+
+### Features
+
+- [flashblock] Commit shared flashblock data structures ([#606](https://github.com/alloy-rs/op-alloy/issues/606))
+
+## [0.22.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.22.0) - 2025-10-29
+
+### Features
+
+- [rpc-jsonrpsee] Add setGasLimit RPC to MinerApiExt ([#605](https://github.com/alloy-rs/op-alloy/issues/605))
+- Generate `OpTypedTransaction` via macro ([#600](https://github.com/alloy-rs/op-alloy/issues/600))
+
+### Miscellaneous Tasks
+
+- Release 0.22.0
+
+## [0.21.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.21.0) - 2025-10-14
+
+### Bug Fixes
+
+- Serde default for attribute fields ([#603](https://github.com/alloy-rs/op-alloy/issues/603))
+
+### Features
+
+- [jovian] Update da footprint types ([#599](https://github.com/alloy-rs/op-alloy/issues/599))
+- [rpc-types-engine] `HeaderInfo` helper for OpExecutionPayload ([#602](https://github.com/alloy-rs/op-alloy/issues/602))
+- Add missing signature helper fn ([#598](https://github.com/alloy-rs/op-alloy/issues/598))
+- Add transaction helper methods to OpExecutionPayload ([#597](https://github.com/alloy-rs/op-alloy/issues/597))
+
+### Miscellaneous Tasks
+
+- Release 0.21.0
+- Remove doc_auto_cfg from docsrs feature ([#604](https://github.com/alloy-rs/op-alloy/issues/604))
+
+## [0.20.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.20.0) - 2025-09-12
+
+### Bug Fixes
+
+- [consensus/holocene] Fix the extra data length for holocene ([#596](https://github.com/alloy-rs/op-alloy/issues/596))
+
+### Miscellaneous Tasks
+
+- Release 0.20.0
+- Missing typed conversion ([#595](https://github.com/alloy-rs/op-alloy/issues/595))
+- Add into_envelope helper ([#594](https://github.com/alloy-rs/op-alloy/issues/594))
+- `missing-const-for-fn` lint back to warn. ([#593](https://github.com/alloy-rs/op-alloy/issues/593))
+
+### Other
+
+- [jovian] extend `extraData` to include minBaseFee in EIP1559Params ([#580](https://github.com/alloy-rs/op-alloy/issues/580))
+
+## [0.19.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.19.1) - 2025-08-26
+
+### Dependencies
+
+- Bump alloy 1.0.26 ([#591](https://github.com/alloy-rs/op-alloy/issues/591))
+
+### Miscellaneous Tasks
+
+- Release 0.19.1
+- Ignore changelog in typos ([#592](https://github.com/alloy-rs/op-alloy/issues/592))
+
+## [0.19.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.19.0) - 2025-08-25
+
+### Dependencies
+
+- Bump jsonrpsee dependencies to version 0.26 ([#589](https://github.com/alloy-rs/op-alloy/issues/589))
+
+### Features
+
+- [rpc] Add superchain reorg error variants ([#590](https://github.com/alloy-rs/op-alloy/issues/590))
+
+### Miscellaneous Tasks
+
+- Release 0.19.0
+- Fix typo in comment ([#583](https://github.com/alloy-rs/op-alloy/issues/583))
+- Fix grammatical typos ([#576](https://github.com/alloy-rs/op-alloy/issues/576))
+
+### Other
+
+- Add spellcheck workflow with typos ([#585](https://github.com/alloy-rs/op-alloy/issues/585))
+- Migrate workflows to checkout v5 ([#586](https://github.com/alloy-rs/op-alloy/issues/586))
+
+## [0.18.14](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.14) - 2025-07-31
+
+### Dependencies
+
+- Bump msrv 1.86 ([#579](https://github.com/alloy-rs/op-alloy/issues/579))
+
+### Features
+
+- Add `jovian_time` to `OpGenesisInfo` ([#581](https://github.com/alloy-rs/op-alloy/issues/581))
+
+### Miscellaneous Tasks
+
+- Release 0.18.14
+
+## [0.18.13](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.13) - 2025-07-22
+
+### Bug Fixes
+
+- [rpc-types-engine] `OpExecutionPayloadEnvelope` serialization fix ([#578](https://github.com/alloy-rs/op-alloy/issues/578))
+
+### Miscellaneous Tasks
+
+- Release 0.18.13
+
+## [0.18.12](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.12) - 2025-07-21
+
+### Bug Fixes
+
+- Generalize `TransactionResponse` impl ([#577](https://github.com/alloy-rs/op-alloy/issues/577))
+
+### Features
+
+- Add deposit receipt conversion ([#575](https://github.com/alloy-rs/op-alloy/issues/575))
+
+### Miscellaneous Tasks
+
+- Release 0.18.12
+
+## [0.18.11](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.11) - 2025-07-17
+
+### Features
+
+- Add into_block_raw methods to OpExecutionPayload types ([#570](https://github.com/alloy-rs/op-alloy/issues/570))
+- Add map logs helpers ([#574](https://github.com/alloy-rs/op-alloy/issues/574))
+
+### Miscellaneous Tasks
+
+- Release 0.18.11
+
+### Other
+
+- [rpc-types-engine/ssz] Fix ssz encoding for blocks of v1 and v2 ([#573](https://github.com/alloy-rs/op-alloy/issues/573))
+
+## [0.18.10](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.10) - 2025-07-17
+
+### Bug Fixes
+
+- [rpc-types-engine] Fix `OpExecutionPayloadEnvelope::payload_hash` ([#572](https://github.com/alloy-rs/op-alloy/issues/572))
+- Simplify OpExecutionPayload numeric field deserialization ([#568](https://github.com/alloy-rs/op-alloy/issues/568))
+- Fix typo in test function name ([#566](https://github.com/alloy-rs/op-alloy/issues/566))
+
+### Features
+
+- Add try_into_block_with methods to OpExecutionPayload ([#563](https://github.com/alloy-rs/op-alloy/issues/563))
+
+### Miscellaneous Tasks
+
+- Release 0.18.10
+- Add transaction getters ([#571](https://github.com/alloy-rs/op-alloy/issues/571))
+- Add receipt helpers ([#567](https://github.com/alloy-rs/op-alloy/issues/567))
+
+### Other
+
+- Update broken OpAttributesWithParent docs.rs link to crate root in engine.md ([#565](https://github.com/alloy-rs/op-alloy/issues/565))
+
+## [0.18.9](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.9) - 2025-06-27
+
+### Dependencies
+
+- Bump alloy ([#562](https://github.com/alloy-rs/op-alloy/issues/562))
+
+### Miscellaneous Tasks
+
+- Release 0.18.9
+
+## [0.18.8](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.8) - 2025-06-27
+
+### Bug Fixes
+
+- Fix links.md ([#559](https://github.com/alloy-rs/op-alloy/issues/559))
+
+### Dependencies
+
+- Upgrade `alloy` version `1.0.12` => `1.0.14` ([#560](https://github.com/alloy-rs/op-alloy/issues/560))
+
+### Features
+
+- Override recover_signer_unchecked_with_buf ([#561](https://github.com/alloy-rs/op-alloy/issues/561))
+
+### Miscellaneous Tasks
+
+- Release 0.18.8
+
+## [0.18.7](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.7) - 2025-06-25
+
+### Bug Fixes
+
+- Use `TransactionRequest` in `Network` impl ([#525](https://github.com/alloy-rs/op-alloy/issues/525))
+- Correct typos in comments ([#554](https://github.com/alloy-rs/op-alloy/issues/554))
+
+### Documentation
+
+- Fix typo in payload comment ([#555](https://github.com/alloy-rs/op-alloy/issues/555))
+
+### Features
+
+- [rpc] Add `OpTransactionRequest` and associate it with `TransactionRequest` of `Optimism` ([#557](https://github.com/alloy-rs/op-alloy/issues/557))
+- Derive `TransactionEnvelope` for `OpPooledTransaction` ([#556](https://github.com/alloy-rs/op-alloy/issues/556))
+
+### Miscellaneous Tasks
+
+- Release 0.18.7
+- Add funding.json
+
+## [0.18.6](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.6) - 2025-06-18
+
+### Dependencies
+
+- Bump alloy ([#551](https://github.com/alloy-rs/op-alloy/issues/551))
+
+### Miscellaneous Tasks
+
+- Release 0.18.6
+- Release 0.18.5
+
+## [0.18.4](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.4) - 2025-06-17
+
+### Bug Fixes
+
+- Move `Transaction::from_transaction` ([#552](https://github.com/alloy-rs/op-alloy/issues/552))
+
+### Miscellaneous Tasks
+
+- Release 0.18.4
+
+## [0.18.3](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.3) - 2025-06-16
+
+### Features
+
+- [rpc] Convert into RPC transaction from generic `OpTransaction` ([#550](https://github.com/alloy-rs/op-alloy/issues/550))
+
+### Miscellaneous Tasks
+
+- Release 0.18.3
+
+## [0.18.2](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.18.2) - 2025-06-16
+
+### Bug Fixes
+
+- Redirect to op-alloy-provider crate ([#540](https://github.com/alloy-rs/op-alloy/issues/540))
+- Fix link to starting.md ([#533](https://github.com/alloy-rs/op-alloy/issues/533))
+
+### Documentation
+
+- Grammar fixes and a cleanup of a broken documentation link ([#537](https://github.com/alloy-rs/op-alloy/issues/537))
+- Docs (README.md): create tables for crateses ([#534](https://github.com/alloy-rs/op-alloy/issues/534))
+
+### Features
+
+- [rpc] Replace wrapped `OpTxEnvelope` with a generic in the `Transaction` RPC response ([#542](https://github.com/alloy-rs/op-alloy/issues/542))
+- [consensus] Add `as_deposit` into `OpTransaction` trait ([#549](https://github.com/alloy-rs/op-alloy/issues/549))
+- [consensus] Add `OpTransaction` trait ([#548](https://github.com/alloy-rs/op-alloy/issues/548))
+- [rpc-types-engine] SSZ Encoding ([#544](https://github.com/alloy-rs/op-alloy/issues/544))
+- [rpc-types-engine] OpExecutionPayload Wrapper ([#539](https://github.com/alloy-rs/op-alloy/issues/539))
+- [interop] Rename `InvalidInboxEntry`->`SuperchainDAError` ([#535](https://github.com/alloy-rs/op-alloy/issues/535))
+
+### Miscellaneous Tasks
+
+- Release 0.18.2
+- [consensus] Rename `SafetyLevel` variants `Unsafe`->`LocalUnsafe` and `Safe`->`CrossSafe` ([#545](https://github.com/alloy-rs/op-alloy/issues/545))
+- Add smol conversion helper ([#536](https://github.com/alloy-rs/op-alloy/issues/536))
+- Add receipt helpers ([#531](https://github.com/alloy-rs/op-alloy/issues/531))
+
+### Other
+
+- 0.18.1 ([#547](https://github.com/alloy-rs/op-alloy/issues/547))
+- 0.18.0 ([#541](https://github.com/alloy-rs/op-alloy/issues/541))
+- Fix link to Enum OpTxType ([#538](https://github.com/alloy-rs/op-alloy/issues/538))
+- Change `InvalidInboxEntry` repr `i64`->`i32` for `jsonrpsee` error compat ([#532](https://github.com/alloy-rs/op-alloy/issues/532))
+
+## [0.17.2](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.17.2) - 2025-05-26
+
+### Features
+
+- Add Extended conversions for OpPooledTransaction, OpTxEnvelope ([#530](https://github.com/alloy-rs/op-alloy/issues/530))
+- Added Transaction conversion from consensus for rpc  ([#529](https://github.com/alloy-rs/op-alloy/issues/529))
+- Add meta helpers ([#527](https://github.com/alloy-rs/op-alloy/issues/527))
+
+### Miscellaneous Tasks
+
+- Release 0.17.2
+
+## [0.17.1](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.17.1) - 2025-05-23
+
+### Bug Fixes
+
+- [rpc-types-engine] Rename op payload sidecar field ([#497](https://github.com/alloy-rs/op-alloy/issues/497))
+
+### Documentation
+
+- Added a new badge to the license ([#494](https://github.com/alloy-rs/op-alloy/issues/494))
+
+### Features
+
+- Made TxDeposit's mint field non-optional ([#514](https://github.com/alloy-rs/op-alloy/issues/514))
+- [`network`] Impl RecommendedFillers for Optimism ([#524](https://github.com/alloy-rs/op-alloy/issues/524))
+
+### Miscellaneous Tasks
+
+- Release 0.17.1
+- Release 0.17.0
+- Relax conversion ([#523](https://github.com/alloy-rs/op-alloy/issues/523))
+
+## [0.16.0](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.16.0) - 2025-05-13
+
+### Bug Fixes
+
+- [rpc-types-engine] Error Implementation ([#519](https://github.com/alloy-rs/op-alloy/issues/519))
+
+### Dependencies
+
+- Bump alloy 1.0.0 ([#521](https://github.com/alloy-rs/op-alloy/issues/521))
+
+### Miscellaneous Tasks
+
+- Release 0.16.0
+- Rm native recover fn ([#522](https://github.com/alloy-rs/op-alloy/issues/522))
+- [super-consensus] Migrate `InvalidInboxEntry` from reth ([#518](https://github.com/alloy-rs/op-alloy/issues/518))
+
+### Other
+
+- 0.15.7 ([#520](https://github.com/alloy-rs/op-alloy/issues/520))
+
+## [0.15.6](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.15.6) - 2025-05-12
+
+### Features
+
+- Add SingerRecoverable impl ([#516](https://github.com/alloy-rs/op-alloy/issues/516))
+
+### Miscellaneous Tasks
+
+- Release 0.15.6
+
+## [0.15.5](https://github.com/alloy-rs/op-alloy
+/releases/tag/v0.15.5) - 2025-05-09
+
+### Bug Fixes
+
+- Ensure all bytes consumed ([#515](https://github.com/alloy-rs/op-alloy/issues/515))
+
+### Documentation
+
+- Fix dead link to starting.md `starting.md` ([#511](https://github.com/alloy-rs/op-alloy/issues/511))
+
+### Features
+
+- [engine] Superchain Signal ([#512](https://github.com/alloy-rs/op-alloy/issues/512))
+
+### Miscellaneous Tasks
+
+- Release 0.15.5
+
 ## [0.15.4](https://github.com/alloy-rs/op-alloy
 /releases/tag/v0.15.4) - 2025-05-05
 
 ### Miscellaneous Tasks
 
+- Release 0.15.4
 - Add istyped support ([#510](https://github.com/alloy-rs/op-alloy/issues/510))
 
 ## [0.15.3](https://github.com/alloy-rs/op-alloy

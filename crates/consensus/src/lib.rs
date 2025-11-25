@@ -4,7 +4,7 @@
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -12,19 +12,21 @@ extern crate alloc;
 #[cfg(feature = "alloy-compat")]
 mod alloy_compat;
 
-mod receipt;
-pub use receipt::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxReceipt};
+mod receipts;
+pub use receipts::{
+    OpDepositReceipt, OpDepositReceiptWithBloom, OpReceipt, OpReceiptEnvelope, OpTxReceipt,
+};
 
 pub mod transaction;
 pub use transaction::{
-    DEPOSIT_TX_TYPE_ID, DepositTransaction, OpPooledTransaction, OpTxEnvelope, OpTxType,
-    OpTypedTransaction, TxDeposit,
+    DEPOSIT_TX_TYPE_ID, DepositTransaction, OpPooledTransaction, OpTransaction, OpTxEnvelope,
+    OpTxType, OpTypedTransaction, TxDeposit,
 };
 
 pub mod eip1559;
 pub use eip1559::{
     EIP1559ParamError, decode_eip_1559_params, decode_holocene_extra_data,
-    encode_holocene_extra_data,
+    decode_jovian_extra_data, encode_holocene_extra_data, encode_jovian_extra_data,
 };
 
 mod source;
@@ -48,7 +50,7 @@ pub use transaction::serde_deposit_tx_rpc;
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub mod serde_bincode_compat {
     pub use super::{
-        receipt::receipts::serde_bincode_compat::OpDepositReceipt,
+        receipts::deposit::serde_bincode_compat::OpDepositReceipt,
         transaction::{serde_bincode_compat as transaction, serde_bincode_compat::TxDeposit},
     };
 }

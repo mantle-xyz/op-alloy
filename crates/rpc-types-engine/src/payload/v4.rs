@@ -2,11 +2,9 @@
 
 use alloc::vec::Vec;
 use alloy_consensus::Block;
-use alloy_eips::{Decodable2718, eip4895::Withdrawal};
-use alloy_primitives::{Address, B256, Bloom, Bytes, U256};
-use alloy_rpc_types_engine::{
-    BlobsBundleV1, ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3, PayloadError,
-};
+use alloy_eips::Decodable2718;
+use alloy_primitives::{B256, Bytes, U256};
+use alloy_rpc_types_engine::{BlobsBundleV1, ExecutionPayloadV3, PayloadError};
 
 /// The Opstack execution payload for `newPayloadV4` of the engine API introduced with isthmus.
 /// See also <https://specs.optimism.io/protocol/isthmus/exec-engine.html#engine_newpayloadv4-api>
@@ -35,6 +33,19 @@ impl OpExecutionPayloadV4 {
         Self { withdrawals_root, payload_inner: payload }
     }
 
+    /// Converts [`OpExecutionPayloadV4`] to [`Block`] with raw transactions.
+    ///
+    /// This performs the same conversion as the underlying V3 payload, but inserts the L2
+    /// withdrawals root and returns raw transaction bytes instead of decoded transactions.
+    pub fn into_block_raw(self) -> Result<Block<Bytes>, PayloadError> {
+        let mut base_block = self.payload_inner.into_block_raw()?;
+
+        // overwrite l1 withdrawals root with l2 withdrawals root
+        base_block.header.withdrawals_root = Some(self.withdrawals_root);
+
+        Ok(base_block)
+    }
+
     /// Converts [`OpExecutionPayloadV4`] to [`Block`].
     ///
     /// This performs the same conversion as the underlying V3 payload, but inserts the L2
@@ -42,12 +53,27 @@ impl OpExecutionPayloadV4 {
     ///
     /// See also [`ExecutionPayloadV3::try_into_block`].
     pub fn try_into_block<T: Decodable2718>(self) -> Result<Block<T>, PayloadError> {
-        let mut base_block = self.payload_inner.try_into_block()?;
+        let block = self.into_block_raw()?;
+        block.try_map_transactions(|tx| {
+            T::decode_2718_exact(tx.as_ref())
+                .map_err(alloy_rlp::Error::from)
+                .map_err(PayloadError::from)
+        })
+    }
 
-        // overwrite l1 withdrawals root with l2 withdrawals root
-        base_block.header.withdrawals_root = Some(self.withdrawals_root);
-
-        Ok(base_block)
+    /// Converts [`OpExecutionPayloadV4`] to [`Block`] with a custom transaction mapper.
+    ///
+    /// This performs the same conversion as the underlying V3 payload, but inserts the L2
+    /// withdrawals root.
+    ///
+    /// See also [`ExecutionPayloadV3::try_into_block_with`].
+    pub fn try_into_block_with<T, F, E>(self, f: F) -> Result<Block<T>, PayloadError>
+    where
+        F: FnMut(Bytes) -> Result<T, E>,
+        E: Into<PayloadError>,
+    {
+        let block = self.into_block_raw()?;
+        block.try_map_transactions(f).map_err(|e| e.into())
     }
 }
 
@@ -61,10 +87,10 @@ impl ssz::Decode for OpExecutionPayloadV4 {
         let mut builder = ssz::SszDecoderBuilder::new(bytes);
 
         builder.register_type::<B256>()?;
-        builder.register_type::<Address>()?;
+        builder.register_type::<alloy_primitives::Address>()?;
         builder.register_type::<B256>()?;
         builder.register_type::<B256>()?;
-        builder.register_type::<Bloom>()?;
+        builder.register_type::<alloy_primitives::Bloom>()?;
         builder.register_type::<B256>()?;
         builder.register_type::<u64>()?;
         builder.register_type::<u64>()?;
@@ -74,7 +100,7 @@ impl ssz::Decode for OpExecutionPayloadV4 {
         builder.register_type::<U256>()?;
         builder.register_type::<B256>()?;
         builder.register_type::<Vec<Bytes>>()?;
-        builder.register_type::<Vec<Withdrawal>>()?;
+        builder.register_type::<Vec<alloy_eips::eip4895::Withdrawal>>()?;
         builder.register_type::<u64>()?;
         builder.register_type::<u64>()?;
         builder.register_type::<B256>()?;
@@ -83,8 +109,8 @@ impl ssz::Decode for OpExecutionPayloadV4 {
 
         Ok(Self {
             payload_inner: ExecutionPayloadV3 {
-                payload_inner: ExecutionPayloadV2 {
-                    payload_inner: ExecutionPayloadV1 {
+                payload_inner: alloy_rpc_types_engine::ExecutionPayloadV2 {
+                    payload_inner: alloy_rpc_types_engine::ExecutionPayloadV1 {
                         parent_hash: decoder.decode_next()?,
                         fee_recipient: decoder.decode_next()?,
                         state_root: decoder.decode_next()?,
@@ -118,8 +144,8 @@ impl ssz::Encode for OpExecutionPayloadV4 {
 
     fn ssz_append(&self, buf: &mut Vec<u8>) {
         let offset = <B256 as ssz::Encode>::ssz_fixed_len() * 6
-            + <Address as ssz::Encode>::ssz_fixed_len()
-            + <Bloom as ssz::Encode>::ssz_fixed_len()
+            + <alloy_primitives::Address as ssz::Encode>::ssz_fixed_len()
+            + <alloy_primitives::Bloom as ssz::Encode>::ssz_fixed_len()
             + <u64 as ssz::Encode>::ssz_fixed_len() * 6
             + <U256 as ssz::Encode>::ssz_fixed_len()
             + ssz::BYTES_PER_LENGTH_OFFSET * 3;

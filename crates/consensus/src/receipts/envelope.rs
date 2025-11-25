@@ -118,9 +118,27 @@ impl<T> OpReceiptEnvelope<T> {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
+    /// Converts the receipt's log type by applying a function to each log.
+    ///
+    /// Returns the receipt with the new log type.
+    pub fn map_logs<U>(self, f: impl FnMut(T) -> U) -> OpReceiptEnvelope<U> {
+        match self {
+            Self::Legacy(r) => OpReceiptEnvelope::Legacy(r.map_logs(f)),
+            Self::Eip2930(r) => OpReceiptEnvelope::Eip2930(r.map_logs(f)),
+            Self::Eip1559(r) => OpReceiptEnvelope::Eip1559(r.map_logs(f)),
+            Self::Eip7702(r) => OpReceiptEnvelope::Eip7702(r.map_logs(f)),
+            Self::Deposit(r) => OpReceiptEnvelope::Deposit(r.map_receipt(|r| r.map_logs(f))),
+        }
+    }
+
     /// Return the receipt logs.
     pub fn logs(&self) -> &[T] {
         &self.as_receipt().unwrap().logs
+    }
+
+    /// Consumes the type and returns the logs.
+    pub fn into_logs(self) -> Vec<T> {
+        self.into_receipt().logs
     }
 
     /// Return the receipt's bloom.
@@ -157,6 +175,14 @@ impl<T> OpReceiptEnvelope<T> {
         match self {
             Self::Deposit(t) => Some(&t.receipt),
             _ => None,
+        }
+    }
+
+    /// Consumes the type and returns the underlying [`Receipt`].
+    pub fn into_receipt(self) -> Receipt<T> {
+        match self {
+            Self::Legacy(t) | Self::Eip2930(t) | Self::Eip1559(t) | Self::Eip7702(t) => t.receipt,
+            Self::Deposit(t) => t.receipt.into_inner(),
         }
     }
 
@@ -303,6 +329,21 @@ impl Decodable2718 for OpReceiptEnvelope {
 
     fn fallback_decode(buf: &mut &[u8]) -> Eip2718Result<Self> {
         Ok(Self::Legacy(Decodable::decode(buf)?))
+    }
+}
+
+impl<T> From<T> for OpReceiptEnvelope<T>
+where
+    T: Into<ReceiptWithBloom<OpDepositReceipt<T>>>,
+{
+    fn from(value: T) -> Self {
+        Self::Deposit(value.into())
+    }
+}
+
+impl<T> From<OpReceiptEnvelope<T>> for Receipt<T> {
+    fn from(receipt: OpReceiptEnvelope<T>) -> Self {
+        receipt.into_receipt()
     }
 }
 
