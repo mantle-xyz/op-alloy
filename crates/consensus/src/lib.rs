@@ -37,6 +37,9 @@ pub use block::OpBlock;
 
 pub mod interop;
 
+pub mod predeploys;
+pub use predeploys::L2_TO_L1_MESSAGE_PASSER_ADDRESS;
+
 #[cfg(feature = "serde")]
 pub use transaction::serde_deposit_tx_rpc;
 
@@ -50,7 +53,10 @@ pub use transaction::serde_deposit_tx_rpc;
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub mod serde_bincode_compat {
     pub use super::{
-        receipts::deposit::serde_bincode_compat::OpDepositReceipt,
+        receipts::{
+            deposit::serde_bincode_compat::OpDepositReceipt,
+            receipt::serde_bincode_compat::OpReceipt,
+        },
         transaction::{serde_bincode_compat as transaction, serde_bincode_compat::TxDeposit},
     };
 }
