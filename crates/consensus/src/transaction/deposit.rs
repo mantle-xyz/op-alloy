@@ -98,33 +98,19 @@ impl TxDeposit {
         })
     }
 
-    /// Decodes a u128 value from RLP format. If the value doesn't exist, the field will be omitted
-    /// from encoding.
+    /// Decodes an optional trailing `u128` from RLP.
     ///
-    /// According to RLP specification:
-    /// - 0x00-0x7f: single-byte integer
-    /// - 0x80-0xb7: multi-byte string/integer (1-55 bytes)
-    /// - 0xb8-0xbf: long string (>55 bytes)
-    /// - 0xc0-0xff: list types (not valid for u128)
+    /// If there are no bytes left in the current payload, the optional field is omitted.
+    /// If bytes are present, they must decode into a valid `u128`; malformed data is an error.
     ///
-    /// Since u128 requires at most 16 bytes, valid encoding is in range 0x00-0xb7.
-    /// We check if the first byte is < 0xc0 to determine if it's a valid u128 encoding.
+    /// This matches geth's `rlp:"optional"` behavior: optional means "may be absent",
+    /// not "decoding failures are ignored".
     pub fn decode_optional_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
         if buf.is_empty() {
             return Ok(None);
         }
 
-        // Check if the first byte indicates a list type (>= 0xc0), which is not valid for u128
-        // If it's a list type, the field was omitted
-        let first_byte = *buf.first().ok_or(DecodeError::InputTooShort)?;
-        if first_byte >= 0xc0 {
-            return Ok(None);
-        }
-
-        // Try to decode as u128, if it fails, return None (field was omitted)
-        // Since eth_tx_value is the last field, if decoding fails, the buffer should be empty
-        // or contain invalid data, indicating the field was omitted
-        Ok(Decodable::decode(buf).ok())
+        Ok(Some(Decodable::decode(buf)?))
     }
 
     /// Decodes the transaction from RLP bytes.
@@ -684,7 +670,7 @@ mod tests {
 
         let mut buffer = BytesMut::new();
         tx_deposit.rlp_encode_fields(&mut buffer);
-        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).unwrap_or_default();
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
 
         assert_eq!(tx_deposit, decoded);
         assert_eq!(decoded.eth_tx_value, None);
@@ -744,20 +730,49 @@ mod tests {
         assert_eq!(result, Ok(Some(65535)));
         assert!(buf.is_empty()); // Buffer should be consumed
 
-        // Test invalid data (empty list)
+        // Test invalid data (empty list) should error, not be treated as "missing"
         let mut buf = &[0xc0][..]; // RLP encoding of empty list (invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for invalid data
+        assert!(result.is_err());
 
-        // Test list data (invalid for u128)
+        // Test list data (invalid for u128) should error
         let mut buf = &[0xc1, 0x80][..]; // RLP encoding of [0] (list, invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for list data
+        assert!(result.is_err());
 
-        // Test list data (invalid for u128)
+        // Test malformed string encoding (declared length > actual length) should error
+        let mut buf = &[0x82, 0x01][..];
+        let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
+        assert!(result.is_err());
+
+        // Test long list data (invalid for u128) should error
         let mut buf = &[0xf8, 0x8c, 0x81, 0x97, 0x84][..]; // RLP encoding of [0] (list, invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for list data
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rlp_decode_fields_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 100,
+            eth_tx_value: None,
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        // Simulate an explicitly present but malformed eth_tx_value field (list instead of integer).
+        buffer.extend_from_slice(&[0xc0]);
+
+        let result = TxDeposit::rlp_decode_fields(&mut &buffer[..]);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -885,6 +900,31 @@ mod tests {
         assert_eq!(tx_deposit, decoded);
         assert_eq!(decoded.eth_value, 200);
         assert_eq!(decoded.eth_tx_value, None);
+    }
+
+    #[test]
+    fn test_decode_2718_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            // Use a one-byte integer so we can mutate it in-place without changing length fields.
+            eth_tx_value: Some(1),
+        };
+
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+        *encoded.last_mut().expect("encoded tx should not be empty") = 0xc0;
+
+        let mut encoded_slice = encoded.as_ref();
+        let result = TxDeposit::decode_2718(&mut encoded_slice);
+        assert!(result.is_err());
     }
 
     #[test]
