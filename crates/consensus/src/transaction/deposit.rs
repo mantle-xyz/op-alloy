@@ -119,17 +119,20 @@ impl TxDeposit {
         if !header.list {
             return Err(alloy_rlp::Error::UnexpectedString);
         }
-        let remaining = buf.len();
-
-        if header.payload_length > remaining {
+        if header.payload_length > buf.len() {
             return Err(alloy_rlp::Error::InputTooShort);
         }
 
-        let this = Self::rlp_decode_fields(buf)?;
+        // Decode fields strictly within this RLP payload so trailing bytes (e.g. next tx in a
+        // stream) are never interpreted as optional fields of the current tx.
+        let (payload, rest) = buf.split_at(header.payload_length);
+        let mut payload_buf = payload;
+        let this = Self::rlp_decode_fields(&mut payload_buf)?;
 
-        if buf.len() + header.payload_length != remaining {
+        if !payload_buf.is_empty() {
             return Err(alloy_rlp::Error::UnexpectedLength);
         }
+        *buf = rest;
 
         Ok(this)
     }
@@ -954,6 +957,46 @@ mod tests {
                 assert!(buf.is_empty(), "Buffer should be consumed after decoding");
             }
         }
+    }
+
+    #[test]
+    fn test_rlp_decode_concatenated_txs_with_missing_eth_tx_value() {
+        let tx1 = TxDeposit {
+            source_hash: B256::with_last_byte(1),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: None,
+        };
+        let tx2 = TxDeposit {
+            source_hash: B256::with_last_byte(2),
+            from: Address::with_last_byte(3),
+            to: TxKind::Call(Address::with_last_byte(4)),
+            mint: 2000,
+            value: U256::from(6000),
+            gas_limit: 200000,
+            is_system_transaction: true,
+            input: Bytes::from_static(&[5, 6]),
+            eth_value: 300,
+            eth_tx_value: Some(7),
+        };
+
+        let mut buf = BytesMut::new();
+        tx1.rlp_encode(&mut buf);
+        tx2.rlp_encode(&mut buf);
+
+        let mut slice = buf.as_ref();
+        let decoded1 = TxDeposit::rlp_decode(&mut slice).expect("first tx should decode");
+        let decoded2 = TxDeposit::rlp_decode(&mut slice).expect("second tx should decode");
+
+        assert_eq!(decoded1, tx1);
+        assert_eq!(decoded2, tx2);
+        assert!(slice.is_empty());
     }
 }
 
