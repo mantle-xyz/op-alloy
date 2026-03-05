@@ -98,22 +98,19 @@ impl TxDeposit {
         })
     }
 
-    /// Decodes a u128 value from RLP format. If the value doesn't exist, the field will be omitted
-    /// from encoding.
+    /// Decodes an optional trailing `u128` from RLP.
+    ///
+    /// If there are no bytes left in the current payload, the optional field is omitted.
+    /// If bytes are present, they must decode into a valid `u128`; malformed data is an error.
+    ///
+    /// This matches geth's `rlp:"optional"` behavior: optional means "may be absent",
+    /// not "decoding failures are ignored".
     pub fn decode_optional_u128_from_rlp(buf: &mut &[u8]) -> Result<Option<u128>, DecodeError> {
         if buf.is_empty() {
             return Ok(None);
         }
 
-        // Check the first byte to determine if it's a valid u128 value
-        // If first byte <= 0x7f (127), it represents a single-byte integer
-        // If first byte is in range 0x80-0xa0, it represents a multi-byte integer (max 32 bytes)
-        // If first byte > 0xa0, it's not a valid u128 encoding, indicating the field was omitted
-        if *buf.first().ok_or(DecodeError::InputTooShort)? <= 0xa0 {
-            return Ok(Some(Decodable::decode(buf)?));
-        }
-
-        Ok(None)
+        Ok(Some(Decodable::decode(buf)?))
     }
 
     /// Decodes the transaction from RLP bytes.
@@ -122,17 +119,20 @@ impl TxDeposit {
         if !header.list {
             return Err(alloy_rlp::Error::UnexpectedString);
         }
-        let remaining = buf.len();
-
-        if header.payload_length > remaining {
+        if header.payload_length > buf.len() {
             return Err(alloy_rlp::Error::InputTooShort);
         }
 
-        let this = Self::rlp_decode_fields(buf)?;
+        // Decode fields strictly within this RLP payload so trailing bytes (e.g. next tx in a
+        // stream) are never interpreted as optional fields of the current tx.
+        let (payload, rest) = buf.split_at(header.payload_length);
+        let mut payload_buf = payload;
+        let this = Self::rlp_decode_fields(&mut payload_buf)?;
 
-        if buf.len() + header.payload_length != remaining {
+        if !payload_buf.is_empty() {
             return Err(alloy_rlp::Error::UnexpectedLength);
         }
+        *buf = rest;
 
         Ok(this)
     }
@@ -180,7 +180,7 @@ impl TxDeposit {
         mem::size_of::<u128>() + // gas_limit
         mem::size_of::<bool>() + // is_system_transaction
         self.input.len()  + // input
-        mem::size_of::<Option<u128>>() + // eth_value
+        mem::size_of::<u128>() + // eth_value
         mem::size_of::<Option<u128>>() // eth_tx_value
     }
 
@@ -673,7 +673,7 @@ mod tests {
 
         let mut buffer = BytesMut::new();
         tx_deposit.rlp_encode_fields(&mut buffer);
-        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).unwrap_or_default();
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
 
         assert_eq!(tx_deposit, decoded);
         assert_eq!(decoded.eth_tx_value, None);
@@ -733,20 +733,270 @@ mod tests {
         assert_eq!(result, Ok(Some(65535)));
         assert!(buf.is_empty()); // Buffer should be consumed
 
-        // Test invalid data (empty list)
+        // Test invalid data (empty list) should error, not be treated as "missing"
         let mut buf = &[0xc0][..]; // RLP encoding of empty list (invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for invalid data
+        assert!(result.is_err());
 
-        // Test list data (invalid for u128)
+        // Test list data (invalid for u128) should error
         let mut buf = &[0xc1, 0x80][..]; // RLP encoding of [0] (list, invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for list data
+        assert!(result.is_err());
 
-        // Test list data (invalid for u128)
+        // Test malformed string encoding (declared length > actual length) should error
+        let mut buf = &[0x82, 0x01][..];
+        let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
+        assert!(result.is_err());
+
+        // Test long list data (invalid for u128) should error
         let mut buf = &[0xf8, 0x8c, 0x81, 0x97, 0x84][..]; // RLP encoding of [0] (list, invalid for u128)
         let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
-        assert_eq!(result, Ok(None)); // Should return None for list data
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rlp_decode_fields_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 100,
+            eth_tx_value: None,
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        // Simulate an explicitly present but malformed eth_tx_value field (list instead of integer).
+        buffer.extend_from_slice(&[0xc0]);
+
+        let result = TxDeposit::rlp_decode_fields(&mut &buffer[..]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_eth_value_zero() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 0, // Test zero value
+            eth_tx_value: Some(100),
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 0);
+    }
+
+    #[test]
+    fn test_eth_value_and_eth_tx_value_both_zero() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: Some(0), // Test zero value
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 0);
+        assert_eq!(decoded.eth_tx_value, Some(0));
+    }
+
+    #[test]
+    fn test_eth_value_max() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: u128::MAX, // Test maximum value
+            eth_tx_value: Some(u128::MAX),
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, u128::MAX);
+        assert_eq!(decoded.eth_tx_value, Some(u128::MAX));
+    }
+
+    #[test]
+    fn test_eip2718_encode_decode_with_new_fields() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: Some(300),
+        };
+
+        // Test EIP-2718 encoding
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+
+        // Test EIP-2718 decoding
+        let mut encoded_slice = encoded.as_ref();
+        let decoded = TxDeposit::decode_2718(&mut encoded_slice).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 200);
+        assert_eq!(decoded.eth_tx_value, Some(300));
+    }
+
+    #[test]
+    fn test_eip2718_encode_decode_with_eth_tx_value_none() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: None, // Test None value
+        };
+
+        // Test EIP-2718 encoding
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+
+        // Test EIP-2718 decoding
+        let mut encoded_slice = encoded.as_ref();
+        let decoded = TxDeposit::decode_2718(&mut encoded_slice).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 200);
+        assert_eq!(decoded.eth_tx_value, None);
+    }
+
+    #[test]
+    fn test_decode_2718_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            // Use a one-byte integer so we can mutate it in-place without changing length fields.
+            eth_tx_value: Some(1),
+        };
+
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+        *encoded.last_mut().expect("encoded tx should not be empty") = 0xc0;
+
+        let mut encoded_slice = encoded.as_ref();
+        let result = TxDeposit::decode_2718(&mut encoded_slice);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_optional_u128_boundary_values() {
+        use alloy_rlp::Encodable;
+
+        // Test values that encode to bytes in the 0xa0-0xb7 range
+        // These are multi-byte integers with 16-55 bytes
+        let test_values = vec![
+            // Values that encode to 0xa0-0xb7 range (16-55 byte strings)
+            // Note: u128 max is 16 bytes, so values encoding to >16 bytes are invalid for u128
+            // But we test the boundary case where the first byte is in this range
+            0x8000u128, // Encodes to 0x82 0x80 0x00
+            0xffffu128, // Encodes to 0x82 0xff 0xff
+        ];
+
+        for value in test_values {
+            let mut encoded = BytesMut::new();
+            value.encode(&mut encoded);
+            let first_byte = encoded[0];
+
+            // Only test if the encoding is valid for u128 (first byte < 0xc0)
+            if first_byte < 0xc0 {
+                let mut buf = encoded.as_ref();
+                let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
+                assert_eq!(result, Ok(Some(value)), "Failed to decode value: {}", value);
+                assert!(buf.is_empty(), "Buffer should be consumed after decoding");
+            }
+        }
+    }
+
+    #[test]
+    fn test_rlp_decode_concatenated_txs_with_missing_eth_tx_value() {
+        let tx1 = TxDeposit {
+            source_hash: B256::with_last_byte(1),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: None,
+        };
+        let tx2 = TxDeposit {
+            source_hash: B256::with_last_byte(2),
+            from: Address::with_last_byte(3),
+            to: TxKind::Call(Address::with_last_byte(4)),
+            mint: 2000,
+            value: U256::from(6000),
+            gas_limit: 200000,
+            is_system_transaction: true,
+            input: Bytes::from_static(&[5, 6]),
+            eth_value: 300,
+            eth_tx_value: Some(7),
+        };
+
+        let mut buf = BytesMut::new();
+        tx1.rlp_encode(&mut buf);
+        tx2.rlp_encode(&mut buf);
+
+        let mut slice = buf.as_ref();
+        let decoded1 = TxDeposit::rlp_decode(&mut slice).expect("first tx should decode");
+        let decoded2 = TxDeposit::rlp_decode(&mut slice).expect("second tx should decode");
+
+        assert_eq!(decoded1, tx1);
+        assert_eq!(decoded2, tx2);
+        assert!(slice.is_empty());
     }
 }
 
